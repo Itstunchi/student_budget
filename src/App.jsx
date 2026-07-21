@@ -1,14 +1,9 @@
-import { useState } from 'react'
-import './App.css'
+import { useState } from "react";
+import Dashboard from "./Dashboard";
+import "./App.css";
 
 function App() {
-
-
-  return (
-    <div>
-      <h2>WELCOME TO OUR STUDENT BUDGET </h2>
-    </div>
-  )
+  return <Dashboard />;
 }
 
-export default App
+export default App;

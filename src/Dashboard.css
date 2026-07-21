@@ -1,0 +1,622 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+  background: #f5f6fa;
+  color: #1a1a2e;
+}
+
+.dashboard {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 240px;
+  background: #fff;
+  border-right: 1px solid #edeff3;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #6c4ce0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.logo-subtitle {
+  font-size: 11px;
+  color: #8a8da0;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #5a5c6e;
+  cursor: pointer;
+  text-align: left;
+}
+
+.nav-item:hover {
+  background: #f5f6fa;
+}
+
+.nav-item.active {
+  background: #efeafe;
+  color: #6c4ce0;
+  font-weight: 600;
+}
+
+.advisor-promo {
+  margin-top: auto;
+  background: #f5f3ff;
+  border-radius: 14px;
+  padding: 16px;
+  text-align: center;
+}
+
+.advisor-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 10px;
+}
+
+.advisor-promo-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.advisor-promo-text {
+  font-size: 12px;
+  color: #7a7c8e;
+  margin-bottom: 12px;
+}
+
+.chat-now-btn {
+  width: 100%;
+  background: #6c4ce0;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #edeff3;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.user-role {
+  font-size: 11px;
+  color: #8a8da0;
+}
+
+/* Main */
+.main {
+  flex: 1;
+  padding: 24px 32px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.topbar h1 {
+  font-size: 22px;
+  margin-bottom: 4px;
+}
+
+.topbar p {
+  font-size: 13px;
+  color: #8a8da0;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.icon-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid #edeff3;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.notif-dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  background: #f04d6a;
+  border-radius: 50%;
+}
+
+.ask-advisor-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #6c4ce0;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* Stat cards */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid #edeff3;
+}
+
+.stat-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.stat-icon.purple {
+  background: #efeafe;
+  color: #6c4ce0;
+}
+.stat-icon.green {
+  background: #e6f9ef;
+  color: #2ecc71;
+}
+.stat-icon.orange {
+  background: #fff3e6;
+  color: #f5a623;
+}
+.stat-icon.blue {
+  background: #e8f2fe;
+  color: #4a9de0;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #8a8da0;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-sub {
+  font-size: 11px;
+  color: #8a8da0;
+}
+
+.purple-text {
+  color: #6c4ce0;
+}
+.green-text {
+  color: #2ecc71;
+}
+.orange-text {
+  color: #f5a623;
+}
+.blue-text {
+  color: #4a9de0;
+}
+
+/* Content grid */
+.content-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+.left-col,
+.right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #edeff3;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.card-header h3 {
+  font-size: 15px;
+}
+
+.link {
+  font-size: 13px;
+  color: #6c4ce0;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Donut chart */
+.budget-overview-body {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.donut-amount {
+  font-size: 15px;
+  font-weight: 700;
+  fill: #1a1a2e;
+}
+
+.donut-label {
+  font-size: 11px;
+  fill: #8a8da0;
+}
+
+.budget-legend {
+  list-style: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.budget-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-label {
+  flex: 1;
+}
+
+.legend-percent {
+  color: #8a8da0;
+  width: 36px;
+}
+
+.legend-amount {
+  font-weight: 600;
+  width: 70px;
+  text-align: right;
+}
+
+/* Bills */
+.bills-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bill-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.bill-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.bill-icon.netflix {
+  background: #1a1a2e;
+}
+.bill-icon.wifi {
+  background: #4a9de0;
+}
+.bill-icon.water {
+  background: #4a9de0;
+}
+.bill-icon.school {
+  background: #2ecc71;
+}
+
+.bill-info {
+  flex: 1;
+}
+
+.bill-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.bill-date {
+  font-size: 11px;
+  color: #8a8da0;
+}
+
+.bill-amount {
+  font-size: 13px;
+  font-weight: 600;
+  width: 70px;
+}
+
+.bill-due {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.bill-due.due-soon {
+  background: #fce8ec;
+  color: #f04d6a;
+}
+.bill-due.due-mid {
+  background: #fff3e6;
+  color: #f5a623;
+}
+.bill-due.due-far {
+  background: #e6f9ef;
+  color: #2ecc71;
+}
+
+.more-icon {
+  color: #b4b6c4;
+  cursor: pointer;
+}
+
+/* Advisor chat banner */
+.advisor-chat-banner {
+  background: #f5f3ff;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.advisor-chat-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.advisor-chat-text {
+  flex: 1;
+}
+
+.advisor-chat-text strong {
+  font-size: 13px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.advisor-chat-text p {
+  font-size: 12px;
+  color: #7a7c8e;
+}
+
+.chat-with-advisor-btn {
+  background: #6c4ce0;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Advisor tip */
+.tip-text {
+  font-size: 13px;
+  color: #5a5c6e;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.tip-highlight {
+  background: #f5f3ff;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+.tip-icon {
+  font-size: 18px;
+}
+
+.tip-highlight strong {
+  font-size: 13px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.tip-highlight p {
+  font-size: 12px;
+  color: #7a7c8e;
+}
+
+/* Quick actions */
+.quick-actions-title {
+  font-size: 15px;
+  margin-bottom: 16px;
+}
+
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.quick-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: #f8f8fb;
+  border: 1px solid #edeff3;
+  border-radius: 10px;
+  padding: 14px 8px;
+  font-size: 11px;
+  color: #5a5c6e;
+  cursor: pointer;
+}
+
+.quick-action:hover {
+  background: #efeafe;
+  color: #6c4ce0;
+}
+
+/* Transactions */
+.transactions-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.transaction-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tx-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #f8f8fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5a5c6e;
+}
+
+.tx-info {
+  flex: 1;
+}
+
+.tx-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tx-date {
+  font-size: 11px;
+  color: #8a8da0;
+}
+
+.tx-amount {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f04d6a;
+}
