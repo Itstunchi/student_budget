@@ -2,6 +2,7 @@ import "../styles/Login.css";
 import React from "react";
 import logo from "../assets/logo.png";
 import robot from "../assets/robot.png";
+import google from "../assets/google.png";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -19,6 +20,8 @@ import { auth } from "../firebase/firebase";
 
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { Link } from "react-router-dom";
+import { signInWithPopup } from "firebase/auth";
+import { googleProvider } from "../firebase/firebase";
 
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
@@ -71,6 +74,8 @@ function Login() {
           formData.email,
           formData.password
         );
+
+        console.log(userCredential.user);
 
         navigate("/dashboard");
 
@@ -134,6 +139,42 @@ function Login() {
 
     const navigate = useNavigate();
 
+    const handleGoogleLogin = async () => {
+      try {
+        setLoading(true);
+
+        const result = await signInWithPopup(
+          auth,
+          googleProvider
+        );
+
+        console.log("Google User:", result.user);
+
+        navigate("/dashboard");
+
+      } catch (error) {
+        switch (error.code) {
+          case "auth/popup-closed-by-user":
+            console.log("Google sign-in was cancelled.");
+            return;
+
+          case "auth/popup-blocked":
+            setErrors((prev) => ({
+              ...prev,
+              email: "Your browser blocked the sign-in popup. Please allow popups and try again.",
+            }));
+            return;
+
+          default:
+            console.error(error);
+            setErrors((prev) => ({
+              ...prev,
+              email: "Google sign-in failed. Please try again.",
+            }));
+        }
+      }
+    };
+
   return (
     <div className="login-page">
 
@@ -156,13 +197,13 @@ function Login() {
           expenses and savings.
         </p>
 
-        <div className="features">
+        {/* <div className="features">
           <p> 
             <FiTarget /> Track spending</p>
           <p><FiShield /> Save smarter</p>
           <p><FiTrendingUp /> Reach financial goals</p>
           <p><FiBell /> Bill reminders</p>
-        </div>
+        </div> */}
 
       </div>
 
@@ -249,9 +290,12 @@ function Login() {
 
         <div className="social-buttons">
 
-          <button>Google</button>
-
-          <button>Microsoft</button>
+          <button
+              type="button"
+              onClick={handleGoogleLogin}
+          >
+              Google
+          </button>
 
         </div>
 
