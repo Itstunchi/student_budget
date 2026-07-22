@@ -1,0 +1,504 @@
+/* Google Font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Poppins", sans-serif;
+}
+
+body{
+    background:#f6f7fb;
+}
+
+.login-page{
+    width:100%;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:40px;
+    gap:35px;
+}
+
+/* ================= LEFT PANEL ================= */
+
+.left-side{
+    width:420px;
+    min-height:760px;
+    background:white;
+    border-radius:25px;
+    padding:40px;
+    box-shadow:0 15px 40px rgba(0,0,0,.08);
+
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+}
+
+.logo{
+    width:100%;
+    margin-bottom:35px;
+}
+
+.logo h2{
+    color:#5f2eea;
+    font-size:32px;
+    font-weight:700;
+}
+
+.logo p{
+    color:#888;
+    margin-top:5px;
+}
+
+.robot{
+    width:250px;
+    margin-bottom:30px;
+}
+
+.left-side h2{
+    color:#222;
+    font-size:30px;
+    margin-bottom:15px;
+}
+
+.left-side>p{
+    color:#666;
+    line-height:1.8;
+    margin-bottom:35px;
+}
+
+.features{
+    width:100%;
+}
+
+.features p{
+    background:#f7f5ff;
+    margin:12px 0;
+    padding:15px;
+    border-radius:14px;
+    text-align:left;
+    color:#555;
+    transition:.3s;
+}
+
+.features p:hover{
+    background:#6C3CF0;
+    color:white;
+    cursor:pointer;
+}
+
+/* ================= RIGHT PANEL ================= */
+
+.right-side{
+
+    width:700px;
+    min-height:760px;
+    background:white;
+
+    border-radius:25px;
+
+    padding:70px;
+
+    box-shadow:0 15px 40px rgba(0,0,0,.08);
+
+}
+
+.right-side h1{
+
+    font-size:40px;
+
+    color:#222;
+
+    margin-bottom:12px;
+
+}
+
+.right-side>p{
+
+    color:#777;
+
+    margin-bottom:40px;
+
+}
+
+form{
+
+    display:flex;
+
+    flex-direction:column;
+
+}
+
+label{
+
+    margin-bottom:10px;
+
+    font-weight:600;
+
+    color:#333;
+
+}
+
+.input-box input{
+    flex:1;
+    border:none;
+    outline:none;
+    background:transparent;
+    font-size:16px;
+    color:#333;
+}
+
+.input-box input::placeholder{
+    color:#a5a5a5;
+}
+
+/* input:focus{
+
+    border:1px solid #6C3CF0;
+
+    box-shadow:0 0 0 5px rgba(108,60,240,.15);
+
+} */
+
+.remember{
+    display:flex;
+    align-items:center;
+    margin-bottom:30px;
+}
+
+.remember label{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:15px;
+    color:#555;
+    cursor:pointer;
+}
+
+.remember input{
+    width:18px;
+    height:18px;
+    accent-color:#6C3CF0;
+}
+
+.remember a{
+
+    text-decoration:none;
+
+    color:#6C3CF0;
+
+    font-weight:600;
+
+}
+
+.login-btn{
+
+    height:60px;
+
+    border:none;
+
+    border-radius:15px;
+
+    background:linear-gradient(90deg,#6C3CF0,#7e5af5);
+
+    color:white;
+
+    font-size:18px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+.login-btn:hover{
+
+    transform:translateY(-3px);
+
+    box-shadow:0 15px 25px rgba(108,60,240,.35);
+
+}
+
+.or{
+
+    text-align:center;
+
+    margin:35px 0;
+
+    color:#888;
+
+    position:relative;
+
+}
+
+.or::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:40%;
+
+    height:1px;
+
+    background:#ddd;
+
+    left:0;
+
+    top:50%;
+
+}
+
+.or::after{
+
+    content:"";
+
+    position:absolute;
+
+    width:40%;
+
+    height:1px;
+
+    background:#ddd;
+
+    right:0;
+
+    top:50%;
+
+}
+
+.social-buttons{
+
+    display:flex;
+
+    gap:20px;
+
+}
+
+.social-buttons button{
+
+    flex:1;
+
+    height:58px;
+
+    border-radius:15px;
+
+    border:1px solid #ddd;
+
+    background:white;
+
+    font-size:17px;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+.social-buttons button:hover{
+
+    border-color:#6C3CF0;
+
+    color:#6C3CF0;
+
+}
+
+.signup{
+
+    margin-top:40px;
+
+    text-align:center;
+
+    color:#666;
+
+}
+
+.signup a{
+
+    text-decoration:none;
+
+    color:#6C3CF0;
+
+    font-weight:600;
+
+}
+
+.input-box{
+    display:flex;
+    align-items:center;
+    width:100%;
+    height:60px;
+    border:1px solid #dddddd;
+    border-radius:16px;
+    padding:0 18px;
+    margin-bottom:25px;
+    transition:.3s;
+    background:white;
+}
+
+.input-box:focus-within{
+    border-color:#6C3CF0;
+    box-shadow:0 0 0 4px rgba(108,60,240,.12);
+}
+
+.password-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+}
+
+.password-header a{
+    text-decoration:none;
+    color:#6C3CF0;
+    font-size:15px;
+    font-weight:600;
+}
+
+.password-header a:hover{
+    text-decoration:underline;
+}
+
+.eye-btn{
+    border:none;
+    background:none;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#777;
+    font-size:22px;
+    transition:.3s;
+}
+
+.eye-btn:hover{
+    color:#6C3CF0;
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 14px;
+  margin-top: -18px;
+  margin-bottom: 18px;
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.input-error {
+  border: 1px solid #ef4444;
+}
+
+.input-error:focus-within {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+}
+
+.success-message{
+    color:#16a34a;
+    background:#ecfdf3;
+    border:1px solid #bbf7d0;
+    padding:12px 16px;
+    border-radius:12px;
+    margin-bottom:20px;
+    font-size:14px;
+    font-weight:500;
+}
+
+.input-icon{
+    color: #6C3CF0;
+    margin-right: 10px;
+    
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media(max-width:1100px){
+
+.login-page{
+
+    flex-direction:column;
+
+    padding:25px;
+
+}
+
+.left-side{
+
+    width:100%;
+
+    max-width:700px;
+
+    min-height:auto;
+
+}
+
+.right-side{
+
+    width:100%;
+
+    max-width:700px;
+
+    min-height:auto;
+
+    padding:45px;
+
+}
+
+}
+
+@media(max-width:700px){
+
+.left-side{
+
+    padding:30px;
+
+}
+
+.robot{
+
+    width:180px;
+
+}
+
+.left-side h2{
+
+    font-size:24px;
+
+}
+
+.right-side{
+
+    padding:30px;
+
+}
+
+.right-side h1{
+
+    font-size:30px;
+
+}
+
+.social-buttons{
+
+    flex-direction:column;
+
+}
+
+.remember{
+
+    flex-direction:column;
+
+    align-items:flex-start;
+
+    gap:15px;
+
+}
+
+}

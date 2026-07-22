@@ -1,9 +1,20 @@
-import { useState } from "react";
+import { Routes, Route } from "react-router-dom";
+import Login from "./pages/Login";
+import Signup from "./pages/Signup";
+import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./Dashboard";
-import "./App.css";
 
 function App() {
-  return <Dashboard />;
+  return (
+    <Routes>
+      <Route path="/" element={<Login />} />
+      <Route path="/" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route part="/Dashboard" />
+      {/* <Route path="/dashboard" element={<Dashboard />} /> */}
+    </Routes>
+  );
 }
 
 export default App;
