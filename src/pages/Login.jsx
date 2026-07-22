@@ -2,7 +2,6 @@ import "../styles/Login.css";
 import React from "react";
 import logo from "../assets/logo.png";
 import robot from "../assets/robot.png";
-import google from "../assets/google.png";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
