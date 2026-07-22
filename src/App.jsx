@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./Dashboard";
+import Advisor from "./pages/budgetAdvisor";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       {/* <Route part="/Dashboard" /> */}
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/advisor" element={<Advisor />} />
     </Routes>
   );
 }
