@@ -30,6 +30,9 @@ import DangerRow from "../components/DangerRow";
 import SecurityCard from "../components/SecurityCard";
 
 
+import EditProfileModal from "../components/EditProfileModal";
+
+
 
 
 import {
@@ -46,12 +49,7 @@ import { MdSavings } from "react-icons/md";
 
 
 
-const user = {
-  fullName: "Daniel",
-  email: "danieledjang1@gmail.com",
-  joinedAt: "April 13 2026",
-  photo: "",
-};
+
 
 
 
@@ -68,6 +66,33 @@ const [activeColor, setActiveColor] = useState("#6c3df4");
 
 
 const [hasNotification, setHasNotification] = useState(false);
+
+
+// const [user, setUser] = useState({
+//   fullName: "Daniel Edjang",
+//   email: "danieledjang1@gmail.com",
+//   phone: "+234 811 701 2465",
+//   joinedAt: "April 13, 2026",
+//   photo: "",
+// });
+
+const [user, setUser] = useState({
+  fullName: "Daniel Edjang",
+  email: "danieledjang1@gmail.com",
+  phone: "+234 811 701 2465",
+  currency: "NGN (₦)",
+  language: "English",
+  password: "••••••••",
+  joinedAt: "April 13, 2026",
+  photo: "",
+});
+
+
+const [isEditing, setIsEditing] = useState(false);
+
+
+
+
 
 useEffect(() => {
   document.documentElement.style.setProperty(
@@ -93,6 +118,19 @@ useEffect(() => {
           <div>
             <h1>Settings & Profile</h1>
             <p>Manage your account, preferences and budget rules.</p>
+
+
+            {/* {isEditing && <EditProfileModal />} */}
+
+            {/* {isEditing && (
+  <EditProfileModal
+    user={user}
+    setUser={setUser}
+    setIsEditing={setIsEditing}
+  />
+)} */}
+
+
           </div>
 
 
@@ -133,7 +171,13 @@ useEffect(() => {
 
        
 
-<ProfileCard user={user} />
+{/* <ProfileCard user={user} /> */}
+
+
+<ProfileCard
+  user={user}
+  setIsEditing={setIsEditing}
+/>
 
 
 
@@ -143,34 +187,64 @@ useEffect(() => {
   icon={<FaUser />}
   title="Account Settings"
 >
- <SettingRow
+ {/* <SettingRow
     label="Full Name"
     value="Daniel Edjang"
+/> */}
+
+<SettingRow
+    label="Full Name"
+    value={user.fullName}
 />
+
+{/* <SettingRow
+    label="Email Address"
+    value="danieledjang1@gmail.com"
+/> */}
 
 <SettingRow
     label="Email Address"
-    value="danieledjang1@gmail.com"
+    value={user.email}
 />
+
+{/* <SettingRow
+    label="Phone Number"
+    value="+234 811 701 2465"
+/> */}
 
 <SettingRow
     label="Phone Number"
-    value="+234 811 701 2465"
+    value={user.phone}
 />
+
+{/* <SettingRow
+    label="Currency"
+    value="NGN (₦)"
+/> */}
 
 <SettingRow
     label="Currency"
-    value="NGN (₦)"
+    value={user.currency}
 />
+
+{/* <SettingRow
+    label="Language"
+    value="English"
+/> */}
 
 <SettingRow
     label="Language"
-    value="English"
+    value={user.language}
 />
+
+{/* <SettingRow
+    label="Password"
+    value="••••••••"
+/> */}
 
 <SettingRow
     label="Password"
-    value="••••••••"
+    value={user.password}
 />
 
 </Accordion>
@@ -358,6 +432,16 @@ icon={<FaPalette />}
 
 
 <SecurityCard />
+
+{/* {isEditing && <EditProfileModal />} */}
+
+{isEditing && (
+  <EditProfileModal
+    user={user}
+    setUser={setUser}
+    setIsEditing={setIsEditing}
+  />
+)}
 
 
 

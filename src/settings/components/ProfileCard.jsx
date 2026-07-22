@@ -8,7 +8,10 @@ import {
 
 
 
-export default function ProfileCard({ user }) {
+// export default function ProfileCard({ user }) {
+
+
+export default function ProfileCard({ user, setIsEditing }) {
 
 
   const [image, setImage] = useState(null);
@@ -112,11 +115,26 @@ export default function ProfileCard({ user }) {
 
       <div className="profile-right">
 
-        <button className="edit-btn">
+        {/* <button className="edit-btn">
 
           Edit Profile
 
-        </button>
+        </button> */}
+
+
+
+
+        <button
+    className="edit-btn"
+    onClick={() => setIsEditing(true)}
+>
+    Edit Profile
+</button>
+
+
+
+
+
 
       </div>
 
