@@ -11,8 +11,8 @@ function App() {
       <Route path="/" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route part="/Dashboard" />
-      {/* <Route path="/dashboard" element={<Dashboard />} /> */}
+      {/* <Route part="/Dashboard" /> */}
+      <Route path="/dashboard" element={<Dashboard />} />
     </Routes>
   );
 }
