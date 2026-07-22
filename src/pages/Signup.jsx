@@ -9,6 +9,8 @@ import { auth } from "../firebase/firebase";
 
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { FiUser } from "react-icons/fi";
+import { signInWithPopup } from "firebase/auth";
+import { googleProvider } from "../firebase/firebase";
 
 
 function Login() {
@@ -85,6 +87,8 @@ function Login() {
           formData.password
         );
 
+        console.log(userCredential.user);
+
         // Save the user's display name in Firebase
         await updateProfile(userCredential.user, {
           displayName: formData.fullName,
@@ -134,6 +138,42 @@ function Login() {
 
     const navigate = useNavigate();
 
+    const handleGoogleLogin = async () => {
+      try {
+        setLoading(true);
+
+        const result = await signInWithPopup(
+          auth,
+          googleProvider
+        );
+
+        console.log("Google User:", result.user);
+
+        navigate("/dashboard");
+
+      } catch (error) {
+          switch (error.code) {
+            case "auth/popup-closed-by-user":
+              console.log("Google sign-in was cancelled.");
+              return;
+
+            case "auth/popup-blocked":
+              setErrors((prev) => ({
+                ...prev,
+                email: "Your browser blocked the sign-in popup. Please allow popups and try again.",
+              }));
+              return;
+
+            default:
+              console.error(error);
+              setErrors((prev) => ({
+                ...prev,
+                email: "Google sign-in failed. Please try again.",
+              }));
+          }
+        }
+    };
+
   return (
     <div className="login-page">
 
@@ -155,13 +195,13 @@ function Login() {
           Create An Account To Access Student Budget.
         </p>
 
-        <div className="features">
+        {/* <div className="features">
           <p> 
             <FiTarget /> Track spending</p>
           <p><FiShield /> Save smarter</p>
           <p><FiTrendingUp /> Reach financial goals</p>
           <p><FiBell /> Bill reminders</p>
-        </div>
+        </div> */}
 
       </div>
 
@@ -283,9 +323,12 @@ function Login() {
 
         <div className="social-buttons">
 
-          <button>Google</button>
-
-          <button>Microsoft</button>
+          <button
+              type="button"
+              onClick={handleGoogleLogin}
+          >
+              Google
+          </button>
 
         </div>
 
