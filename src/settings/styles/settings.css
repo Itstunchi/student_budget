@@ -24,9 +24,16 @@ body{
     padding:40px 20px;
 }
 
+
+
+
+
+
 .settings-container{
     max-width:1200px;
-    margin:auto;
+    width:100%;
+    margin:0 auto;
+    padding:30px;
 }
 
 
@@ -163,11 +170,21 @@ body{
 
 
 
+
+
+
+
+
 .settings-grid{
     margin-top:30px;
     display:grid;
     grid-template-columns:repeat(2,1fr);
     gap:20px;
+    align-items:start;
+}
+
+.settings-footer{
+    grid-column:1 / -1;
 }
 
 
@@ -777,7 +794,7 @@ body{
     margin-bottom:16px;
     border:1px solid #ececec;
     border-radius:14px;
-    background:#fff;
+
 }
 
 .danger-row:last-child{
@@ -852,16 +869,31 @@ body{
 
 /* ================= Security Card ================= */
 
+
+
+
+
+
+
 .security-card{
-    margin-top:35px;
+    width:100%;
     background:#fff;
-    border-radius:18px;
-    padding:25px;
+    border-radius:20px;
+    padding:24px 30px;
     display:flex;
-    align-items:flex-start;
+    align-items:center;
     gap:20px;
-    border:1px solid #ececec;
+    box-shadow:0 8px 25px rgba(0,0,0,.05);
 }
+
+
+
+
+
+
+
+
+
 
 .security-icon{
     width:60px;
@@ -1176,4 +1208,27 @@ max-width:220px;
 
     cursor:pointer;
 
+}
+
+
+
+
+
+
+ .settings-footer{
+    margin-top: 28px;
+}
+
+
+.settings-footer .security-card{
+    width:100%;
+}
+
+.security-footer{
+    width:100%;
+}
+
+.settings-footer{
+    width:100%;
+    margin-top:25px;
 }

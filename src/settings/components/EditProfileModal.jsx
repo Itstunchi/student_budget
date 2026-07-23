@@ -19,7 +19,7 @@ export default function EditProfileModal({
 
         <div className="form-group">
           <label>Full Name</label>
-          {/* <input type="text" /> */}
+         
 
           <input
   type="text"
@@ -36,7 +36,7 @@ export default function EditProfileModal({
 
         <div className="form-group">
           <label>Email Address</label>
-          {/* <input type="email" /> */}
+          
 
           <input
   type="email"
@@ -53,7 +53,7 @@ export default function EditProfileModal({
 
         <div className="form-group">
           <label>Phone Number</label>
-          {/* <input type="text" /> */}
+         
 
           <input
   type="text"
@@ -121,9 +121,7 @@ export default function EditProfileModal({
 
 
         <div className="modal-buttons">
-          {/* <button className="cancel-btn">
-            Cancel
-          </button> */}
+         
 
           <button
   className="cancel-btn"
@@ -133,9 +131,7 @@ export default function EditProfileModal({
 </button>
 
 
-          {/* <button className="save-btn">
-            Save Changes
-          </button> */}
+          
 
           <button
   className="save-btn"

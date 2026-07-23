@@ -2,17 +2,27 @@ import {
   FaChevronDown
 } from "react-icons/fa";
 
-import { useState } from "react";
 
-function Accordion({ icon, title, children }) {
-  const [open, setOpen] = useState(false);
+
+function Accordion({
+  icon,
+  title,
+  children,
+  isOpen,
+  onToggle,
+}) {
+
+
+  
 
   return (
     <div className="accordion">
 
       <button
         className="accordion-header"
-        onClick={() => setOpen(!open)}
+        
+
+        onClick={onToggle}
       >
         <div className="accordion-left">
 
@@ -28,12 +38,16 @@ function Accordion({ icon, title, children }) {
 
 
         <FaChevronDown
-  className={`arrow ${open ? "rotate" : ""}`}
+  
+
+  className={`arrow ${isOpen ? "rotate" : ""}`}
 />
 
       </button>
 
-      {open && (
+      
+
+      {isOpen && (
         <div className="accordion-body">
           {children}
         </div>

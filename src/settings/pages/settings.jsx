@@ -68,13 +68,7 @@ const [activeColor, setActiveColor] = useState("#6c3df4");
 const [hasNotification, setHasNotification] = useState(false);
 
 
-// const [user, setUser] = useState({
-//   fullName: "Daniel Edjang",
-//   email: "danieledjang1@gmail.com",
-//   phone: "+234 811 701 2465",
-//   joinedAt: "April 13, 2026",
-//   photo: "",
-// });
+
 
 const [user, setUser] = useState({
   fullName: "Daniel Edjang",
@@ -90,6 +84,8 @@ const [user, setUser] = useState({
 
 const [isEditing, setIsEditing] = useState(false);
 
+
+const [openAccordion, setOpenAccordion] = useState(null);
 
 
 
@@ -120,15 +116,7 @@ useEffect(() => {
             <p>Manage your account, preferences and budget rules.</p>
 
 
-            {/* {isEditing && <EditProfileModal />} */}
-
-            {/* {isEditing && (
-  <EditProfileModal
-    user={user}
-    setUser={setUser}
-    setIsEditing={setIsEditing}
-  />
-)} */}
+            
 
 
           </div>
@@ -171,7 +159,7 @@ useEffect(() => {
 
        
 
-{/* <ProfileCard user={user} /> */}
+
 
 
 <ProfileCard
@@ -183,64 +171,56 @@ useEffect(() => {
 
         <div className="settings-grid">
 
-  <Accordion
+          <div className="settings-column">
+
+  
+
+<Accordion
   icon={<FaUser />}
   title="Account Settings"
+  isOpen={openAccordion === "account"}
+  onToggle={() =>
+    setOpenAccordion(
+      openAccordion === "account" ? null : "account"
+    )
+  }
 >
- {/* <SettingRow
-    label="Full Name"
-    value="Daniel Edjang"
-/> */}
+ 
 
 <SettingRow
     label="Full Name"
     value={user.fullName}
 />
 
-{/* <SettingRow
-    label="Email Address"
-    value="danieledjang1@gmail.com"
-/> */}
+
 
 <SettingRow
     label="Email Address"
     value={user.email}
 />
 
-{/* <SettingRow
-    label="Phone Number"
-    value="+234 811 701 2465"
-/> */}
+
 
 <SettingRow
     label="Phone Number"
     value={user.phone}
 />
 
-{/* <SettingRow
-    label="Currency"
-    value="NGN (₦)"
-/> */}
+
 
 <SettingRow
     label="Currency"
     value={user.currency}
 />
 
-{/* <SettingRow
-    label="Language"
-    value="English"
-/> */}
+
 
 <SettingRow
     label="Language"
     value={user.language}
 />
 
-{/* <SettingRow
-    label="Password"
-    value="••••••••"
-/> */}
+
 
 <SettingRow
     label="Password"
@@ -251,40 +231,20 @@ useEffect(() => {
 
 
 
-<Accordion
-   
-    icon={<MdSavings />}
-    title="Budget Rules"
+
+
+
+
+ <Accordion
+  icon={<FaBell />}
+  title="Notification Settings"
+  isOpen={openAccordion === "notification"}
+  onToggle={() =>
+    setOpenAccordion(
+      openAccordion === "notification" ? null : "notification"
+    )
+  }
 >
-
-    <BudgetRuleRow
-        title="Spending Limits"
-        description="Set limits for categories"
-    />
-
-    <BudgetRuleRow
-        title="Auto-Save Rules"
-        description="Automatically save a portion of income"
-    />
-
-    <BudgetRuleRow
-        title="Overspending Alerts"
-        description="Choose when to be alerted"
-    />
-
-    <BudgetRuleRow
-        title="Safe-to-Spend"
-        description="Customize your safe-to-spend calculation"
-    />
-
-</Accordion>
-
-
-
-
-<Accordion 
-icon={<FaBell />}
- title="Notification Settings">
 
   <ToggleRow
     title="Budget Alerts"
@@ -321,35 +281,18 @@ icon={<FaBell />}
 
 
 
-<Accordion 
-
-icon={<FaLock />}
-title="Data & Privacy">
-
-  <InfoRow
-    title="Privacy Settings"
-    description="Manage who can view your information."
-  />
-
-  <InfoRow
-    title="Download My Data"
-    description="Export your budgeting history and account data."
-  />
-
- 
-
-  <CacheRow />
-
-</Accordion>
 
 
-
-
-
-<Accordion
-
-icon={<FaRobot />}
-  title="AI Advisor Preferences">
+  <Accordion
+  icon={<FaRobot />}
+  title="AI Advisor Preferences"
+  isOpen={openAccordion === "ai"}
+  onToggle={() =>
+    setOpenAccordion(
+      openAccordion === "ai" ? null : "ai"
+    )
+  }
+>
 
   <ToggleRow
     title="Personalized Recommendations"
@@ -380,9 +323,142 @@ icon={<FaRobot />}
 
 
 
+
+
+
+
+
+
+
+
+ <Accordion
+  icon={<FaRobot />}
+  title="AI Advisor Preferences"
+  isOpen={openAccordion === "ai"}
+  onToggle={() =>
+    setOpenAccordion(
+      openAccordion === "ai" ? null : "ai"
+    )
+  }
+>
+
+
+
+
+
+
+
+
+
+    <AppearanceSettings />
+
+</Accordion>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+
+
+<div className="settings-column">
+
+
+
+
+<Accordion
+  icon={<MdSavings />}
+  title="Budget Rules"
+  isOpen={openAccordion === "budget"}
+  onToggle={() =>
+    setOpenAccordion(
+      openAccordion === "budget" ? null : "budget"
+    )
+  }
+>
+
+    <BudgetRuleRow
+        title="Spending Limits"
+        description="Set limits for categories"
+    />
+
+    <BudgetRuleRow
+        title="Auto-Save Rules"
+        description="Automatically save a portion of income"
+    />
+
+    <BudgetRuleRow
+        title="Overspending Alerts"
+        description="Choose when to be alerted"
+    />
+
+    <BudgetRuleRow
+        title="Safe-to-Spend"
+        description="Customize your safe-to-spend calculation"
+    />
+
+</Accordion>
+
+
+
+
+
+
+
+
+<Accordion
+  icon={<FaLock />}
+  title="Data & Privacy"
+  isOpen={openAccordion === "privacy"}
+  onToggle={() =>
+    setOpenAccordion(
+      openAccordion === "privacy" ? null : "privacy"
+    )
+  }
+>
+
+  <InfoRow
+    title="Privacy Settings"
+    description="Manage who can view your information."
+  />
+
+  <InfoRow
+    title="Download My Data"
+    description="Export your budgeting history and account data."
+  />
+
+ 
+
+  <CacheRow />
+
+</Accordion>
+
+
+
+
+
+
+
 <Accordion
   icon={<FaExclamationTriangle className="danger-icon" />}
   title="Danger Zone"
+  isOpen={openAccordion === "danger"}
+  onToggle={() =>
+    setOpenAccordion(
+      openAccordion === "danger"
+        ? null
+        : "danger"
+    )
+  }
 >
 
     <DangerRow
@@ -404,25 +480,14 @@ icon={<FaRobot />}
 </Accordion>
 
 
-
-
-
-<Accordion 
-
-icon={<FaPalette />}
- title="Appearance">
+</div>
 
 
 
 
 
 
-
-
-
-    <AppearanceSettings />
-
-</Accordion>
+ 
 
 
 
@@ -431,9 +496,14 @@ icon={<FaPalette />}
 
 
 
-<SecurityCard />
 
-{/* {isEditing && <EditProfileModal />} */}
+<div className="settings-footer">
+    <SecurityCard />
+</div>
+
+
+
+
 
 {isEditing && (
   <EditProfileModal
@@ -448,7 +518,16 @@ icon={<FaPalette />}
 </div>
 
       </div>
+
+
+     
+
+
+
     </div>
+
+
+
 
 
 

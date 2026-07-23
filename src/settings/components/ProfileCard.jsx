@@ -8,7 +8,7 @@ import {
 
 
 
-// export default function ProfileCard({ user }) {
+
 
 
 export default function ProfileCard({ user, setIsEditing }) {
@@ -115,11 +115,7 @@ export default function ProfileCard({ user, setIsEditing }) {
 
       <div className="profile-right">
 
-        {/* <button className="edit-btn">
-
-          Edit Profile
-
-        </button> */}
+       
 
 
 

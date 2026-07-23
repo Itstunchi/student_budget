@@ -13,7 +13,7 @@ export default function SecurityCard() {
         <h3>Your Security is Our Priority</h3>
 
         <p>
-          Student Budget uses secure authentication and modern encryption
+          BudgetBuddy uses secure authentication and modern encryption
           practices to help protect your personal information and financial
           data. Always keep your password private and enable extra security
           features when available.
