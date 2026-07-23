@@ -331,13 +331,29 @@ useEffect(() => {
 
 
 
- <Accordion
+ {/* <Accordion
   icon={<FaRobot />}
   title="AI Advisor Preferences"
   isOpen={openAccordion === "ai"}
   onToggle={() =>
     setOpenAccordion(
       openAccordion === "ai" ? null : "ai"
+    )
+  }
+> */}
+
+
+
+
+<Accordion
+  icon={<FaPalette />}
+  title="Appearance"
+  isOpen={openAccordion === "appearance"}
+  onToggle={() =>
+    setOpenAccordion(
+      openAccordion === "appearance"
+        ? null
+        : "appearance"
     )
   }
 >
