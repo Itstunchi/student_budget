@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React from 'react';
 import { 
   LayoutDashboard, PieChart, Wallet, TrendingUp, CalendarCheck, 
@@ -9,6 +10,13 @@ import {
   AreaChart, Area, PieChart as RePieChart, Pie, Cell, 
   XAxis, YAxis, Tooltip, ResponsiveContainer 
 } from 'recharts';
+=======
+import { Routes, Route } from "react-router-dom";
+import Sidebar from "./components/Sidebar";
+
+
+
+>>>>>>> 5245cda1c00ba6c305421184e2af1e852fb1b497
 
 // --- DATA DEFINITIONS ---
 
@@ -39,6 +47,7 @@ const transactions = [
 
 export default function App() {
   return (
+<<<<<<< HEAD
     <div className="flex h-screen bg-slate-50 text-slate-800 font-sans overflow-hidden">
       
       {/* 1. SIDEBAR */}
@@ -54,6 +63,13 @@ export default function App() {
               <span className="text-xs text-slate-400">Smart Money Advisor</span>
             </div>
           </div>
+=======
+    <Routes>
+      <Route path="/" element={<Sidebar/>} />
+    </Routes>
+  );
+}
+>>>>>>> 5245cda1c00ba6c305421184e2af1e852fb1b497
 
           {/* Navigation Links */}
           <nav className="space-y-1">
