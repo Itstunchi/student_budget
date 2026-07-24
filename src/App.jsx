@@ -4,6 +4,7 @@ import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./Dashboard";
 import Advisor from "./pages/budgetAdvisor";
+import Bills from "./pages/Bills";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       {/* <Route part="/Dashboard" /> */}
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/advisor" element={<Advisor />} />
+       <Route path="/bills" element={<Bills />} />
     </Routes>
   );
 }
