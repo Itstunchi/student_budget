@@ -1,58 +1,58 @@
+// src/components/Sidebar.jsx
 import React from 'react';
-import { LayoutDashboard, Wallet, PiggyBank, TrendingUp, Calendar, FileText, Settings, BellRing, HelpCircle } from 'lucide-react';
+// import your icons here...
 
 export default function Sidebar() {
-  const menuItems = [
-    { icon: <LayoutDashboard size={20} />, label: "Dashboard" },
-    { icon: <Wallet size={20} />, label: "Spending Plan" },
-    { icon: <PiggyBank size={20} />, label: "Savings Plan" },
-    { icon: <TrendingUp size={20} />, label: "Invest Plan" },
-    { icon: <BellRing size={20} />, label: "Bills & Reminders", active: true },
-    { icon: <Calendar size={20} />, label: "Calendar" },
-    { icon: <FileText size={20} />, label: "Insights" },
-    { icon: <HelpCircle size={20} />, label: "Ask Advisor" },
-    { icon: <Settings size={20} />, label: "Settings" },
-  ];
-
   return (
-    <aside className="w-64 bg-white border-r border-slate-100 flex flex-col justify-between p-6 h-screen sticky top-0">
+    <aside className="w-64 min-h-screen bg-white border-r border-slate-100 p-6 flex flex-col justify-between shrink-0">
       <div>
-        {/* Brand Logo */}
-        <div className="flex items-center gap-3 px-2 mb-8">
-          <div className="bg-purple-600 text-white p-2 rounded-xl">
-            <Wallet size={24} />
+        {/* Logo */}
+        <div className="flex items-center gap-2 mb-8">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
+            B
           </div>
           <div>
-            <h1 className="font-bold text-lg text-slate-900 tracking-tight">BudgetBuddy</h1>
-            <p className="text-[10px] text-slate-400 font-medium">Smart Money Adviser</p>
+            <h1 className="font-bold text-slate-800 text-base leading-tight">BudgetBuddy</h1>
+            <p className="text-[10px] text-slate-400">Smart Money Adviser</p>
           </div>
         </div>
 
-        {/* Navigation Menu */}
-        <nav className="space-y-1">
-          {menuItems.map((item, idx) => (
-            <button
-              key={idx}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                item.active 
-                  ? 'bg-purple-50 text-purple-700' 
+        {/* Navigation List */}
+        <nav className="flex flex-col gap-1">
+          {[
+            { name: 'Dashboard', icon: '📊' },
+            { name: 'Spending Plan', icon: '💳' },
+            { name: 'Savings Plan', icon: '🐷' },
+            { name: 'Invest Plan', icon: '📈' },
+            { name: 'Bills & Reminders', icon: '📄', active: true },
+            { name: 'Calendar', icon: '📅' },
+            { name: 'Insights', icon: '💡' },
+            { name: 'Ask Advisor', icon: '🤖' },
+            { name: 'Settings', icon: '⚙️' },
+          ].map((item) => (
+            <a
+              key={item.name}
+              href="#"
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                item.active
+                  ? 'bg-purple-50 text-purple-700'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
               }`}
             >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
+              <span className="text-base">{item.icon}</span>
+              <span>{item.name}</span>
+            </a>
           ))}
         </nav>
       </div>
 
-      {/* User Profile Footer snippet */}
-      <div className="flex items-center gap-3 p-2 border-t border-slate-100 pt-4">
-        <div className="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center font-bold text-purple-700">
+      {/* User Profile Footer */}
+      <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+        <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-semibold text-sm">
           M
         </div>
         <div>
-          <h4 className="text-sm font-semibold text-slate-800">Malvin</h4>
+          <p className="text-sm font-semibold text-slate-800 leading-tight">Malvin</p>
           <p className="text-xs text-slate-400">Student</p>
         </div>
       </div>
