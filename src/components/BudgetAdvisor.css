@@ -22,7 +22,7 @@ body, html {
   overflow: hidden;
 }
 
-/* Sidebar Styling */
+/* Sidebar Styling (kept for pages that still render their own sidebar) */
 .sidebar {
   width: 260px;
   background-color: #FFFFFF;
@@ -197,6 +197,8 @@ body, html {
   justify-content: space-between;
   align-items: center;
   padding: 24px 32px 16px 32px;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .chat-header h2 {
@@ -228,6 +230,7 @@ body, html {
   justify-content: center;
   position: relative;
   color: #334155;
+  flex-shrink: 0;
 }
 
 .bell-badge {
@@ -259,6 +262,7 @@ body, html {
   display: flex;
   align-items: center;
   gap: 8px;
+  white-space: nowrap;
 }
 
 .workspace-layout {
@@ -272,6 +276,7 @@ body, html {
 /* Central Chat Window Layout */
 .chat-window {
   flex: 1;
+  min-width: 0;
   background-color: #FFFFFF;
   border-radius: 24px;
   border: 1px solid #EDF2F7;
@@ -287,6 +292,8 @@ body, html {
   padding: 16px 24px;
   border-bottom: 1px solid #F1F5F9;
   background-color: #FCFDFE;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .info-bot-icon {
@@ -308,6 +315,7 @@ body, html {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .ai-tag {
@@ -336,6 +344,8 @@ body, html {
   display: flex;
   align-items: center;
   gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Message Feed Layout */
@@ -459,6 +469,7 @@ body, html {
 
 .chat-input {
   flex: 1;
+  min-width: 0;
   border: none;
   outline: none;
   font-size: 13px;
@@ -512,6 +523,8 @@ body, html {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 14px;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .widget-title {
@@ -628,4 +641,147 @@ body, html {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* ============================================
+   RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* Tablet and below — hide the right-hand insights panel entirely
+   and let the chat window take up the full width */
+@media (max-width: 1024px) {
+  .budget-container {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .workspace-layout {
+    padding: 0 24px 24px 24px;
+  }
+
+  .right-panel {
+    display: none;
+  }
+
+  .chat-window {
+    min-height: 480px;
+  }
+}
+
+/* Small tablet / large phone — reduce paddings, let header wrap */
+@media (max-width: 768px) {
+  .chat-header {
+    padding: 20px 20px 12px 20px;
+    flex-wrap: wrap;
+  }
+
+  .chat-header h2 {
+    font-size: 20px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .workspace-layout {
+    padding: 0 20px 20px 20px;
+  }
+
+  .chat-window {
+    border-radius: 16px;
+  }
+
+  .message-logs {
+    padding: 16px;
+  }
+
+  .msg-bubble {
+    max-width: 85%;
+  }
+
+  .info-bar {
+    padding: 14px 16px;
+  }
+
+  .input-panel {
+    padding: 12px 16px;
+  }
+}
+
+/* Mobile phones — compact controls, action button collapses to icon-only */
+@media (max-width: 480px) {
+  .chat-header {
+    padding: 16px 16px 10px 16px;
+  }
+
+  .chat-header h2 {
+    font-size: 18px;
+  }
+
+  .chat-header p {
+    font-size: 11px;
+  }
+
+  .action-btn {
+    padding: 10px 12px;
+    font-size: 0;
+    gap: 0;
+  }
+
+  .action-btn svg {
+    flex-shrink: 0;
+  }
+
+  .workspace-layout {
+    padding: 0 12px 16px 12px;
+  }
+
+  .chat-window {
+    border-radius: 14px;
+    min-height: 420px;
+  }
+
+  .info-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 12px 14px;
+  }
+
+  .tips-btn {
+    align-self: flex-end;
+  }
+
+  .message-logs {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .msg-bubble {
+    max-width: 90%;
+    font-size: 12.5px;
+    padding: 10px 14px;
+  }
+
+  .welcome-placeholder {
+    max-width: 220px;
+  }
+
+  .input-panel {
+    padding: 10px 12px;
+  }
+
+  .input-container {
+    padding: 4px 6px 4px 12px;
+  }
+
+  .chat-input {
+    font-size: 12px;
+  }
+
+  .send-btn {
+    width: 32px;
+    height: 32px;
+  }
 }

@@ -129,84 +129,6 @@ export default function BudgetAdvisor() {
 
   return (
     <div className="budget-container">
-      
-      {/* LEFT SIDEBAR */}
-      <aside className="sidebar">
-        <div>
-          <div className="logo-section">
-            <div className="logo-square">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="6" width="18" height="14" rx="3"></rect>
-                <path d="M3 10h18"></path>
-                <path d="M7 15h4"></path>
-              </svg>
-            </div>
-            <div>
-              <h1 className="logo-title">BudgetBuddy</h1>
-              <span className="logo-sub">Smart Money Advisor</span>
-            </div>
-          </div>
-
-          <nav className="nav-links">
-            {[
-              { label: 'Dashboard', d: 'M3 11.5L12 4l9 7.5M5 10v9a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1v-9' },
-              { label: 'Spending Plan', d: 'M3 7h18M3 7v12a1 1 0 001 1h16a1 1 0 001-1V7M3 7l2-4h14l2 4M9 12h6' },
-              { label: 'Savings Plan', d: 'M12 21s7-3.7 7-10V5.5L12 3 5 5.5V11c0 6.3 7 10 7 10z M9.5 11.5l1.7 1.7 3.3-3.4' },
-              { label: 'Invest Plan', d: 'M4 19h16M6 15l4-5 3 3 5-7M14 6h4v4' },
-              { label: 'Bills & Reminders', d: 'M8 3v3M16 3v3M4 9h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1zM9.5 15l1.7 1.7L15 13' },
-              { label: 'Calendar', d: 'M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zM16 2v4M8 2v4M3 10h18' },
-              { label: 'Insights', d: 'M4 20V4M4 20h16M8 16v-5M12 16V8M16 16v-8' },
-              { label: 'Reports', d: 'M7 3h7l5 5v13a1 1 0 01-1 1H7a1 1 0 01-1-1V4a1 1 0 011-1zM14 3v5h5M9 13h6M9 17h6' },
-              { label: 'Ask Advisor', d: 'M21 12a8 8 0 01-11.6 7.1L4 20l1.2-4.3A8 8 0 1121 12z', active: true },
-              { label: 'Settings', d: 'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z' }
-            ].map((item, idx) => (
-              <button key={idx} className={`nav-btn ${item.active ? 'active' : ''}`}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d={item.d} />
-                </svg>
-                {item.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-
-        <div className="sidebar-footer">
-          <div className="upgrade-card">
-            <div className="robot-container">
-              <svg width="56" height="56" viewBox="0 0 64 64" fill="none">
-                <circle cx="14" cy="12" r="1.6" fill="#C4B5FD"/>
-                <circle cx="54" cy="16" r="1.2" fill="#C4B5FD"/>
-                <circle cx="50" cy="8" r="1" fill="#A78BFA"/>
-                <path d="M32 6v6" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round"/>
-                <circle cx="32" cy="4" r="2" fill="#7C3AED"/>
-                <rect x="16" y="14" width="32" height="26" rx="9" fill="#EDE9FE" stroke="#7C3AED" strokeWidth="2"/>
-                <circle cx="25" cy="27" r="3" fill="#7C3AED"/>
-                <circle cx="39" cy="27" r="3" fill="#7C3AED"/>
-                <path d="M25 34c2.5 2 9.5 2 12 0" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round"/>
-                <rect x="10" y="24" width="5" height="9" rx="2.5" fill="#7C3AED"/>
-                <rect x="49" y="24" width="5" height="9" rx="2.5" fill="#7C3AED"/>
-                <path d="M22 46c3 3 17 3 20 0" stroke="#A78BFA" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </div>
-            <h4>Your AI financial buddy</h4>
-            <p>Get personalized advice and answers to your money questions.</p>
-            <button className="upgrade-btn">Upgrade to Premium</button>
-          </div>
-
-          <div className="profile-box">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div className="profile-avatar">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </div>
-              <div>
-                <h4 className="profile-name">Malvin</h4>
-                <p className="profile-role">Student</p>
-              </div>
-            </div>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" strokeWidth="2.5"><path d="M6 9l6 6 6-6"/></svg>
-          </div>
-        </div>
-      </aside>
 
       {/* MAIN VIEW AREA */}
       <main className="main-content">
@@ -241,7 +163,7 @@ export default function BudgetAdvisor() {
                 </div>
                 <div>
                   <h3 className="bot-info-title">
-                    BudgetBuddy Advisor <span className="ai-tag">AI</span>
+                    Buddy <span className="ai-tag">AI</span>
                     <span className="online-dot">● Online</span>
                   </h3>
                   <p style={{ margin: 0, fontSize: '11px', color: '#64748B' }}>Here to help you make smarter financial decisions.</p>
