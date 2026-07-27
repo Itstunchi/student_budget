@@ -4,17 +4,7 @@ import logo from "../assets/logo.png";
 import robot from "../assets/robot.png";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-    FiTarget,
-    FiCalendar,
-    FiShield,
-    FiBell,
-    FiTrendingUp,
-    FiMail,
-    FiLock,
-    FiEye,
-    FiEyeOff,
-} from "react-icons/fi";
+import { FiTarget, FiCalendar, FiShield, FiBell, FiTrendingUp, FiMail, FiLock, FiEye, FiEyeOff } from "../components/Icons";
 import { auth } from "../firebase/firebase";
 
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
