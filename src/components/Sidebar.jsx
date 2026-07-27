@@ -87,7 +87,7 @@ function Sidebar() {
           {!collapsed && <span>Reports</span>}
         </NavLink>
 
-        <NavLink to="/advisor" className="menu-item">
+        <NavLink to="/budgetadvisor" className="menu-item">
           <FiMessageCircle />
           {!collapsed && <span>Ask Advisor</span>}
         </NavLink>
