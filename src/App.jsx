@@ -2,8 +2,9 @@ import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
-import Dashboard from "./Dashboard";
-import Advisor from "./pages/budgetAdvisor";
+import BudgetAdvisor from "./components/BudgetAdvisor";
+import Calendar from "./components/Calendar";
+import SpendingPlanWizard from "./components/SpendingPlanWizard";
 import Bills from "./pages/Bills";
 
 function App() {
@@ -12,10 +13,11 @@ function App() {
       <Route path="/" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
-      {/* <Route part="/Dashboard" /> */}
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/advisor" element={<Advisor />} />
+      <Route path="/advisor" element={<BudgetAdvisor />} />
+      <Route path="/calendar" element={<Calendar />} />
+      <Route path="/spending-plan" element={<SpendingPlanWizard />} />
        <Route path="/bills" element={<Bills />} />
+      {/* <Route path="/dashboard" element={<Dashboard />} /> */}
     </Routes>
   );
 }
