@@ -5,6 +5,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import BudgetAdvisor from "./components/BudgetAdvisor";
 import Calendar from "./components/Calendar";
 import SpendingPlanWizard from "./components/SpendingPlanWizard";
+import SavingsPlan from "./components/SavingsPlan";
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
       <Route path="/advisor" element={<BudgetAdvisor />} />
       <Route path="/calendar" element={<Calendar />} />
       <Route path="/spending-plan" element={<SpendingPlanWizard />} />
+      <Route path="/savings-plan" element={<SavingsPlan />} />
       {/* <Route path="/dashboard" element={<Dashboard />} /> */}
     </Routes>
   );
