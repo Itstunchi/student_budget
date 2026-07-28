@@ -22,6 +22,9 @@ import {
   Smartphone,
 } from "lucide-react";
 import "./Dashboard.css";
+import Sidebar from "../components/Sidebar";
+import { useEffect } from "react";
+import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
 
 const navItems = [
   { icon: Home, label: "Dashboard", active: true },
@@ -150,8 +153,24 @@ function DonutChart({ data }) {
 function Dashboard() {
   const [active, setActive] = useState("Dashboard");
 
-  return (
-    <div className="dashboard">
+  const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }, []);
+
+    if (loading) {
+      return <LoadingScreen />;
+    }
+
+    return (
+      <div className="dashboard">
+        <Sidebar />
+
       {/* Main content */}
       <main className="main">
         <header className="topbar">
@@ -348,7 +367,7 @@ function Dashboard() {
           </div>
         </section>
       </main>
-    </div>
-  );
+      </div>
+    );
 }
 export default Dashboard;

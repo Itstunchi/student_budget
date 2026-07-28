@@ -8,6 +8,7 @@ import SpendingPlanWizard from "./components/SpendingPlanWizard";
 import Bills from "./pages/Bills";
 import Settings from "./settings/pages/settings";
 import Dashboard from "./pages/Dashboard";
+import LoadingScreen from "./components/LoadingScreen/LoadingScreen"
 
 function App() {
   return (
@@ -22,8 +23,9 @@ function App() {
       <Route path="/settings" element={<Settings />} />
       {/* <Route path="/dashboard" element={<Dashboard />} /> */}
       <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/loading-screen" element={<LoadingScreen />} />
     </Routes>
   );
 }
 
-export default App;
+    export default App;   

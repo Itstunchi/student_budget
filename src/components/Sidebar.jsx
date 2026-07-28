@@ -1,61 +1,147 @@
-// src/components/Sidebar.jsx
-import React from 'react';
-// import your icons here...
+import "./Sidebar.css";
+import { NavLink } from "react-router-dom";
+import logo from "../assets/logo.png";
+import robot from "../assets/robot.png";
+import user from "../assets/user.png";
+import { useState } from "react";
+import { FiMenu } from "react-icons/fi";
 
-export default function Sidebar() {
+import {
+  FiHome,
+  FiCreditCard,
+  FiShield,
+  FiTrendingUp,
+  FiCalendar,
+  FiBarChart2,
+  FiFileText,
+  FiMessageCircle,
+  FiSettings,
+  FiChevronDown,
+} from "react-icons/fi";
+
+function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
   return (
-    <aside className="w-64 min-h-screen bg-white border-r border-slate-100 p-6 flex flex-col justify-between shrink-0">
-      <div>
-        {/* Logo */}
-        <div className="flex items-center gap-2 mb-8">
-          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
-            B
-          </div>
-          <div>
-            <h1 className="font-bold text-slate-800 text-base leading-tight">BudgetBuddy</h1>
-            <p className="text-[10px] text-slate-400">Smart Money Adviser</p>
-          </div>
-        </div>
+    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
 
-        {/* Navigation List */}
-        <nav className="flex flex-col gap-1">
-          {[
-            { name: 'Dashboard', icon: '📊' },
-            { name: 'Spending Plan', icon: '💳' },
-            { name: 'Savings Plan', icon: '🐷' },
-            { name: 'Invest Plan', icon: '📈' },
-            { name: 'Bills & Reminders', icon: '📄', active: true },
-            { name: 'Calendar', icon: '📅' },
-            { name: 'Insights', icon: '💡' },
-            { name: 'Ask Advisor', icon: '🤖' },
-            { name: 'Settings', icon: '⚙️' },
-          ].map((item) => (
-            <a
-              key={item.name}
-              href="#"
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                item.active
-                  ? 'bg-purple-50 text-purple-700'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-              }`}
-            >
-              <span className="text-base">{item.icon}</span>
-              <span>{item.name}</span>
-            </a>
-          ))}
-        </nav>
+      <div className="sidebar-header">
+          <button
+              className="toggle-btn"
+              onClick={() => setCollapsed(!collapsed)}
+          >
+              <FiMenu />
+          </button>
       </div>
 
-      {/* User Profile Footer */}
-      <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-        <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center font-semibold text-sm">
-          M
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-slate-800 leading-tight">Malvin</p>
-          <p className="text-xs text-slate-400">Student</p>
-        </div>
+      {/* Logo */}
+
+      <div className="logo">
+
+       <img src={logo} alt="BudgetBuddy Logo" width="250" />
+
+        {!collapsed && (
+            <div>
+                <h2>BudgetBuddy</h2>
+                <p>Smart Student Budget</p>
+            </div>
+        )}
+
       </div>
+
+      {/* Navigation */}
+
+      <nav className="menu">
+
+        <NavLink to="/dashboard" className="menu-item">
+          <FiHome />
+          {!collapsed && <span>Dashboard</span>}
+        </NavLink>
+
+        <NavLink to="/spending-plan" className="menu-item active">
+          <FiCreditCard />
+          {!collapsed && <span>Spending Plan</span>}
+        </NavLink>
+
+        <NavLink to="/savings" className="menu-item">
+          <FiShield />
+          {!collapsed && <span>Savings Plan</span>}
+        </NavLink>
+
+        <NavLink to="/invest" className="menu-item">
+          <FiTrendingUp />
+          {!collapsed && <span>Invest Plan</span>}
+        </NavLink>
+
+        <NavLink to="/bills" className="menu-item">
+          <FiFileText />
+          {!collapsed && <span>Bills & Reminders</span>}
+        </NavLink>
+
+        <NavLink to="/calendar" className="menu-item">
+          <FiCalendar />
+          {!collapsed && <span>Calendar</span>}
+        </NavLink>
+
+        <NavLink to="/reports" className="menu-item">
+          <FiFileText />
+          {!collapsed && <span>Reports</span>}
+        </NavLink>
+
+        <NavLink to="/budgetadvisor" className="menu-item">
+          <FiMessageCircle />
+          {!collapsed && <span>Ask Advisor</span>}
+        </NavLink>
+
+        <NavLink to="/settings" className="menu-item">
+          <FiSettings />
+          {!collapsed && <span>Settings</span>}
+        </NavLink>
+
+      </nav>
+
+      {/* AI Card */}
+
+      {!collapsed && (
+      <div className="advisor-card">
+
+        <img src={robot} alt="Robot" width="550" />
+
+        <h4>Need help?</h4>
+
+        <p>
+          Chat with your AI advisor for personalized guidance.
+        </p>
+
+        <button>Chat Now</button>
+
+      </div>
+      )}
+
+
+      {/* User */}
+
+      <div className="user">
+
+        <img src={user} alt="User" width="550" />
+
+        {!collapsed && (
+            <>
+                <div>
+
+                    <h4>Malvin</h4>
+
+                    <span>Student</span>
+
+                </div>
+
+                <FiChevronDown />
+
+            </>
+        )}
+    </div>
+
     </aside>
   );
 }
+
+export default Sidebar;
