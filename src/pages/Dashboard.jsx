@@ -22,9 +22,9 @@ import {
   Smartphone,
 } from "lucide-react";
 import "./Dashboard.css";
-import Sidebar from "./components/Sidebar";
+import Sidebar from "../components/Sidebar";
 import { useEffect } from "react";
-import LoadingScreen from "./components/LoadingScreen/LoadingScreen";
+import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
 
 const navItems = [
   { icon: Home, label: "Dashboard", active: true },
