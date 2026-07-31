@@ -23,7 +23,6 @@ import {
   FiChevronUp,
 } from "react-icons/fi";
 
-// Helper function to extract any valid profile picture key
 const resolveAvatar = (userObj) => {
   if (!userObj) return userImg;
   return (
@@ -36,7 +35,6 @@ const resolveAvatar = (userObj) => {
   );
 };
 
-// Helper function to fetch the currently active user profile
 const getLoggedInUser = () => {
   try {
     const savedUser = localStorage.getItem("user") || localStorage.getItem("user_profile");
@@ -60,7 +58,6 @@ const getLoggedInUser = () => {
   return { id: "guest", name: "User", role: "Account Owner", email: "", avatar: userImg };
 };
 
-// Helper function to fetch list of all registered accounts
 const getAllAccounts = () => {
   try {
     const savedAccounts = localStorage.getItem("accounts");
@@ -89,7 +86,6 @@ function Sidebar({ isExpanded, onToggleSidebar, onClose }) {
   const sidebarRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // Sync user profile, avatars, and theme settings globally
   useEffect(() => {
     const syncUserAndAccounts = () => {
       const active = getLoggedInUser();
@@ -136,10 +132,8 @@ function Sidebar({ isExpanded, onToggleSidebar, onClose }) {
     };
   }, [location]);
 
-  // Show labels/cards if sidebar is expanded OR hovered while collapsed on desktop
   const showFullContent = isExpanded || isHovered;
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (
@@ -155,18 +149,16 @@ function Sidebar({ isExpanded, onToggleSidebar, onClose }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Whenever a user clicks a nav link, reset dropdowns and force sidebar to collapse back
+  // Collapse sidebar when clicking a page link
   const handleNavClick = () => {
     setShowAccountDropdown(false);
     setShowAddOptions(false);
-    setIsHovered(false); // Remove hover focus state
+    setIsHovered(false);
 
-    // Close mobile overlay drawer
     if (onClose) {
       onClose();
     }
 
-    // Collapse sidebar if it was expanded via hamburger toggle
     if (isExpanded && onToggleSidebar) {
       onToggleSidebar();
     }
@@ -213,11 +205,14 @@ function Sidebar({ isExpanded, onToggleSidebar, onClose }) {
         setIsHovered(false);
       }}
     >
-      {/* Header / Logo Row with Hamburger */}
+      {/* Header / Logo Row */}
       <div className="sidebar-header">
-        {showFullContent && (
-          <img src={logo} alt="BudgetBuddy Logo" className="logo-img" />
-        )}
+        <img 
+          src={logo} 
+          alt="BudgetBuddy Logo" 
+          className="logo-img" 
+          style={{ display: showFullContent ? "block" : "none" }} 
+        />
 
         <button
           className="toggle-btn"
@@ -325,7 +320,7 @@ function Sidebar({ isExpanded, onToggleSidebar, onClose }) {
         </div>
       )}
 
-      {/* User Footer with Switch Account Popup */}
+      {/* User Footer */}
       <div className="user-container" ref={dropdownRef} style={{ position: "relative" }}>
         {showAccountDropdown && showFullContent && (
           <div className="account-dropdown">
@@ -414,7 +409,7 @@ function Sidebar({ isExpanded, onToggleSidebar, onClose }) {
           </div>
         )}
 
-        {/* User Card Trigger */}
+        {/* User Profile Avatar */}
         <div
           className="user"
           style={{ cursor: "pointer" }}
@@ -427,7 +422,7 @@ function Sidebar({ isExpanded, onToggleSidebar, onClose }) {
             }
           }}
         >
-          <img src={currentUser.avatar} alt={currentUser.name} />
+          <img src={currentUser.avatar} alt={currentUser.name} className="user-avatar-img" />
           {showFullContent && (
             <>
               <div className="user-info">

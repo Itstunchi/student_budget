@@ -43,6 +43,7 @@ function App() {
 
   return (
     <ActivityProvider>
+      
       <Routes>
         {/* Standalone Pages without Sidebar */}
         <Route path="/login" element={<Login />} />
@@ -53,7 +54,7 @@ function App() {
 
         {/* Protected App Pages inside Layout */}
         <Route element={<Layout />}>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/signup" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/advisor" element={<BudgetAdvisor />} />
           <Route path="/calendar" element={<Calendar />} />
