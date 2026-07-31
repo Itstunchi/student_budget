@@ -1,244 +1,472 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
-body{
-    font-family:"Poppins", sans-serif;
+* {
+  box-sizing: border-box;
 }
 
-.sidebar{
-    width:270px;
-    background:#ffffff;
-    border-right:1px solid #ececec;
-    display:flex;
-    flex-direction:column;
-    padding:25px 18px;
-    min-height:100vh;
+body {
+  font-family: "Poppins", sans-serif;
 }
 
-.logo{
-    display:flex;
-    align-items:center;
-    gap:12px;
-
-    margin-bottom:35px;
+/* ================= Base Sidebar ================= */
+.sidebar {
+  width: 260px;
+  background: #ffffff;
+  border-right: 1px solid #ececec;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 16px;
+  height: 100vh;
+  position: relative;
+  z-index: 100;
+  overflow-y: auto;
+  overflow-x: hidden;
+  white-space: nowrap;
+  overscroll-behavior: contain;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
 }
 
-.logo img{
-    width:55px;
+.sidebar::-webkit-scrollbar {
+  width: 4px;
 }
 
-.logo h2{
-    font-size:24px;
-    color:#222;
-    margin:0;
-    font-weight:700;
+.sidebar::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 10px;
 }
 
-.logo p{
-    margin-top:3px;
-    color:#777;
-    font-size:13px;
+/* ================= Header & Logo ================= */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
-.menu{
-    display:flex;
-    flex-direction:column;
-    gap:7px;
+.logo-img {
+  max-width: 150px;
+  height: auto;
+  object-fit: contain;
+  transition: opacity 0.2s ease;
 }
 
-.menu-item{
-    display:flex;
-    align-items:center;
-    gap:15px;
-
-    padding:13px 15px;
-
-    border-radius:12px;
-
-    text-decoration:none;
-
-    color:#555;
-
-    font-size:15px;
-
-    transition:.3s;
+.toggle-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: #f4f4f4;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease, transform 0.2s ease;
+  flex-shrink: 0;
 }
 
-.menu-item svg{
-    font-size:20px;
+.toggle-btn:hover {
+  background: #ece7ff;
+  transform: scale(1.04);
 }
 
-.menu-item:hover{
-    background:#f6f2ff;
-    color:#6C3CF0;
+.toggle-btn svg {
+  font-size: 18px;
+  color: #6C3CF0;
 }
 
-.menu-item.active{
-    background:#f2ecff;
-    color:#6C3CF0;
-    font-weight:600;
+/* ================= Navigation Menu ================= */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
 }
 
-.advisor-card{
-
-    margin-top:auto;
-
-    background:#faf8ff;
-
-    border-radius:18px;
-
-    padding:18px;
-
-    text-align:center;
-
-    margin-bottom:20px;
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #555555;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s ease, color 0.2s ease;
 }
 
-.advisor-card img{
-
-    width:150px;
-
-    margin-bottom:10px;
-
+.menu-item svg {
+  font-size: 19px;
+  flex-shrink: 0;
 }
 
-.advisor-card h4{
-
-    margin-bottom:8px;
-
-    color:#222;
-
+.menu-item:hover {
+  background: #f6f2ff;
+  color: #6C3CF0;
 }
 
-.advisor-card p{
-
-    color:#777;
-
-    font-size:13px;
-
-    line-height:1.5;
-
-    margin-bottom:18px;
-
+.menu-item.active {
+  background: #f2ecff;
+  color: #6C3CF0;
+  font-weight: 600;
 }
 
-.advisor-card button{
-
-    width:100%;
-
-    padding:12px;
-
-    border:none;
-
-    border-radius:10px;
-
-    background:#6C3CF0;
-
-    color:#fff;
-
-    font-weight:600;
-
-    cursor:pointer;
-
+.menu-item:focus-visible,
+.toggle-btn:focus-visible {
+  outline: 2px solid #6C3CF0;
+  outline-offset: 2px;
 }
 
-.user{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:12px;
-
-    border-top:1px solid #eee;
-
-    padding-top:18px;
-
+/* ================= AI Advisor Card ================= */
+.advisor-card {
+  margin-top: auto;
+  background: #faf8ff;
+  border-radius: 16px;
+  padding: 16px;
+  text-align: center;
+  margin-bottom: 16px;
+  border: 1px solid #f0eaef;
+  transition: opacity 0.2s ease;
 }
 
-.user img{
-
-    width:46px;
-
-    height:46px;
-
-    border-radius:50%;
-
-    object-fit:cover;
-
+.advisor-card img {
+  width: 100px;
+  margin-bottom: 6px;
+  object-fit: contain;
 }
 
-.user h4{
-
-    margin:0;
-
-    font-size:15px;
-
+.advisor-card h4 {
+  margin: 0 0 6px 0;
+  color: #222;
+  font-size: 15px;
+  font-weight: 600;
 }
 
-.user span{
-
-    color:#888;
-
-    font-size:13px;
-
+.advisor-card p {
+  color: #777;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-bottom: 14px;
+  white-space: normal;
 }
 
-.user svg:last-child{
-
-    margin-left:auto;
-
-    color:#888;
+.advisor-card button {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 10px;
+  background: #6C3CF0;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
 
-.sidebar{
-    width:270px;
-    transition:.35s ease;
+.advisor-card button:hover {
+  background: #5a2fd8;
 }
 
-.sidebar.collapsed{
-    width:90px;
+/* ================= User Profile Footer ================= */
+.user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid #eee;
+  padding-top: 14px;
 }
 
-.sidebar-header{
-    display:flex;
-    justify-content:flex-end;
-    margin-bottom:15px;
+.user img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
-.toggle-btn{
-    width:40px;
-    height:40px;
-    border:none;
-    border-radius:10px;
-    background:#f4f4f4;
-    cursor:pointer;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    transition:.3s;
+.user-info {
+  display: flex;
+  flex-direction: column;
 }
 
-.toggle-btn:hover{
-    background:#ece7ff;
+.user h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
 }
 
-.toggle-btn svg{
-    font-size:22px;
-    color:#6C3CF0;
+.user span {
+  color: #888;
+  font-size: 12px;
 }
 
-.sidebar.collapsed .menu-item{
-    justify-content:center;
+.user svg:last-child {
+  margin-left: auto;
+  color: #888;
 }
 
-.sidebar{
-    overflow:hidden;
+/* ================= Collapsed State ================= */
+.sidebar.collapsed {
+  width: 80px;
+  padding: 20px 12px;
 }
 
-.sidebar.collapsed .logo{
-    justify-content:center;
+.sidebar.collapsed .sidebar-header {
+  justify-content: center;
 }
 
-.sidebar.collapsed .user{
-    justify-content:center;
+.sidebar.collapsed .menu-item {
+  justify-content: center;
+  padding: 12px;
+}
+
+.sidebar.collapsed .user {
+  justify-content: center;
+}
+
+/* ================= Hover Expansion Rules ================= */
+.sidebar.collapsed.hover-expanded {
+  width: 260px;
+  padding: 20px 16px;
+  box-shadow: 6px 0 25px rgba(0, 0, 0, 0.08);
+}
+
+.sidebar.collapsed.hover-expanded .sidebar-header {
+  justify-content: space-between;
+}
+
+.sidebar.collapsed.hover-expanded .menu-item {
+  justify-content: flex-start;
+  padding: 11px 14px;
+}
+
+.sidebar.collapsed.hover-expanded .user {
+  justify-content: flex-start;
+}
+
+/* ================= Overview / Header Card Extras ================= */
+.sp-breadcrumb {
+  font-size: 0.88rem;
+  color: #64748B;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.sp-page-header-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  border: 1px solid #E2E8F0;
+  border-left: 5px solid #5334EA;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.sp-page-header-text h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1E293B;
+  margin-bottom: 6px;
+}
+
+.sp-page-header-text p {
+  font-size: 0.9rem;
+  color: #64748B;
+}
+
+.sp-header-action-btn {
+  background: #5334EA;
+  color: #FFFFFF;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.sp-header-action-btn:hover {
+  background: #4124C7;
+}
+
+.sp-completed-badge {
+  font-size: 0.72rem;
+  background: #D1FAE5;
+  color: #10B981;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-left: 6px;
+  font-weight: 600;
+}
+/* Account Switcher Dropdown */
+.account-dropdown {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 12px;
+  right: 12px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  border: 1px solid #edeff3;
+  padding: 10px;
+  z-index: 999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #8a8da0;
+  padding: 6px 8px;
+  letter-spacing: 0.5px;
+}
+
+.account-list {
+  max-height: 180px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.account-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.account-item:hover {
+  background: #f5f6fa;
+}
+
+.account-item.active-account {
+  background: #f0ebff;
+}
+
+.account-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.account-details {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.account-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.account-email {
+  font-size: 11px;
+  color: #8a8da0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.check-icon {
+  color: #6c4ce0;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: #edeff3;
+  margin: 8px 0;
+}
+
+.add-account-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px dashed #6c4ce0;
+  color: #6c4ce0;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-account-btn:hover {
+  background: #6c4ce0;
+  color: #ffffff;
+}
+:root {
+  --primary-color: #6c3df4;
+}
+
+.sidebar .nav-item.active {
+  background-color: var(--primary-color) !important;
+  color: #ffffff;
+}
+
+.sidebar-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--primary-color);
+}
+/* Ensure menu items display nicely in both collapsed and expanded states */
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.menu-item .nav-icon {
+  font-size: 1.25rem;
+  min-width: 24px;
+}
+
+/* When collapsed, center icons in the mini strip */
+.sidebar.collapsed .menu-item {
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.sidebar.collapsed .sidebar-header {
+  justify-content: center;
 }

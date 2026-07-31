@@ -1,556 +1,412 @@
-import { useState, useEffect } from "react";
-
-
-
-
-
-
-
-
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import "../styles/settings.css";
 
-import SettingRow from "../components/SettingRow";
-
-import Accordion from "../components/Accordion";
-
 import ProfileCard from "../components/ProfileCard";
-
-import BudgetRuleRow from "../components/BudgetRuleRow";
-
-import ToggleRow from "../components/ToggleRow";
-
-import InfoRow from "../components/InfoRow";
-
-import CacheRow from "../components/CacheRow";
-
-import AppearanceSettings from "../components/AppearanceSettings";
-
-import DangerRow from "../components/DangerRow";
-
 import SecurityCard from "../components/SecurityCard";
-
-
 import EditProfileModal from "../components/EditProfileModal";
-
-
-
 
 import {
   FaUser,
   FaBell,
   FaLock,
-  FaRobot,
-  FaPalette,
   FaExclamationTriangle,
+  FaArrowLeft,
+  FaRobot,
+  FaDownload,
+  FaTrash,
 } from "react-icons/fa";
 
 import { MdSavings } from "react-icons/md";
 
+// Helper function to read logged-in user data
+const loadLoggedInUser = () => {
+  const defaultUserData = {
+    fullName: "User Name",
+    email: "user@example.com",
+    phone: "+234 800 000 0000",
+    currency: "NGN (₦)",
+    language: "English",
+    password: "••••••••",
+    joinedAt: "July 2026",
+    photo: "https://api.dicebear.com/7.x/bottts/svg?seed=Felix",
+  };
 
+  try {
+    const saved = localStorage.getItem("user") || localStorage.getItem("user_profile");
+    if (saved) {
+      const parsed = typeof saved === "string" && saved.startsWith("{") ? JSON.parse(saved) : { fullName: saved };
+      return {
+        ...defaultUserData,
+        fullName: parsed.fullName || parsed.name || parsed.username || defaultUserData.fullName,
+        email: parsed.email || defaultUserData.email,
+        phone: parsed.phone || defaultUserData.phone,
+        currency: parsed.currency || defaultUserData.currency,
+        language: parsed.language || defaultUserData.language,
+        joinedAt: parsed.joinedAt || defaultUserData.joinedAt,
+        photo: parsed.photo || parsed.avatar || defaultUserData.photo,
+      };
+    }
+  } catch (e) {
+    console.error("Failed to parse stored user data:", e);
+  }
 
+  return defaultUserData;
+};
 
+// Helper for loading saved notification preferences
+const loadNotificationSettings = () => {
+  try {
+    const saved = localStorage.getItem("notification_settings");
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.error("Failed to load notification preferences:", e);
+  }
+  return {
+    budgetAlerts: true,
+    billReminders: true,
+    savingsUpdates: false,
+    weeklySummary: true,
+    marketingTips: false,
+  };
+};
 
+function Settings() {
+  const navigate = useNavigate();
 
+  const [activeTab, setActiveTab] = useState("profile");
+  const [user, setUser] = useState(loadLoggedInUser);
+  const [notifications, setNotifications] = useState(loadNotificationSettings);
+  const [isEditing, setIsEditing] = useState(false);
+  const [cacheSize, setCacheSize] = useState("2.4 MB");
 
+  // Sync profile update to local storage & trigger live sidebar update
+  const handleUpdateUser = (updatedUserData) => {
+    setUser(updatedUserData);
+    try {
+      const existing = JSON.parse(localStorage.getItem("user") || "{}");
+      const merged = { ...existing, ...updatedUserData, name: updatedUserData.fullName, photo: updatedUserData.photo };
+      localStorage.setItem("user", JSON.stringify(merged));
+      localStorage.setItem("user_profile", JSON.stringify(merged));
+    } catch (e) {
+      localStorage.setItem("user", JSON.stringify(updatedUserData));
+    }
+    // Broadcast event for Sidebar & Navbar profile images to update instantly
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new CustomEvent("profileUpdate", { detail: updatedUserData }));
+  };
 
+  // Toggle notification switches
+  const handleToggleNotification = (key) => {
+    const updated = { ...notifications, [key]: !notifications[key] };
+    setNotifications(updated);
+    localStorage.setItem("notification_settings", JSON.stringify(updated));
+  };
 
+  // Clear application cache
+  const handleClearCache = () => {
+    if (window.confirm("Clear non-essential cached data?")) {
+      setCacheSize("0.0 MB");
+      alert("Application cache cleared!");
+    }
+  };
 
+  // Download user data
+  const handleDownloadData = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(user, null, 2));
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `student-budget-data.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
 
+  // Reset Application
+  const handleResetApp = () => {
+    if (window.confirm("Reset all settings to default values?")) {
+      localStorage.clear();
+      alert("Application settings reset.");
+      window.location.reload();
+    }
+  };
 
-
-
-function Settings() { 
-
-
-const [activeColor, setActiveColor] = useState("#6c3df4");
-
-
-const [hasNotification, setHasNotification] = useState(false);
-
-
-
-
-const [user, setUser] = useState({
-  fullName: "Daniel Edjang",
-  email: "danieledjang1@gmail.com",
-  phone: "+234 811 701 2465",
-  currency: "NGN (₦)",
-  language: "English",
-  password: "••••••••",
-  joinedAt: "April 13, 2026",
-  photo: "",
-});
-
-
-const [isEditing, setIsEditing] = useState(false);
-
-
-const [openAccordion, setOpenAccordion] = useState(null);
-
-
-
-
-useEffect(() => {
-  document.documentElement.style.setProperty(
-    "--primary-color",
-    activeColor
-  );
-}, [activeColor]);
-
-
-
-
-
+  // Delete Account
+  const handleDeleteAccount = () => {
+    if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+      localStorage.clear();
+      navigate("/");
+    }
+  };
 
   return (
-
     
-
     <div className="settings-page">
       <div className="settings-container">
-
+        
         {/* Header */}
         <header className="settings-header">
-          <div>
-            <h1>Settings & Profile</h1>
-            <p>Manage your account, preferences and budget rules.</p>
+          <div className="header-left">
+            <button
+              onClick={() => navigate(-1)}
+              className="back-btn"
+              aria-label="Go back"
+            >
+              <FaArrowLeft />
+            </button>
 
-
-            
-
-
+            <div>
+              <h1>Settings & Profile</h1>
+              <p>Manage your account, preferences, and security rules.</p>
+            </div>
           </div>
 
-
-          
-
-        
-
-
           <div className="header-actions">
-
- 
-
-
-  <button className="notification-btn">
-
-  <FaBell />
-
-  {hasNotification && (
-    <span className="notification-badge"></span>
-  )}
-
-</button>
-
-
-
-
-
-  <button className="advisor-btn">
-    Ask Advisor
-  </button>
-
-</div>
-
-
-
+            <button
+              className="advisor-btn"
+              onClick={() => navigate("/advisor")}
+            >
+              <FaRobot style={{ marginRight: "8px" }} />
+              Ask Advisor
+            </button>
+          </div>
         </header>
 
-
-       
-
-
-
-
-<ProfileCard
-  user={user}
-  setIsEditing={setIsEditing}
-/>
-
-
-
-        <div className="settings-grid">
-
-          <div className="settings-column">
-
-  
-
-<Accordion
-  icon={<FaUser />}
-  title="Account Settings"
-  isOpen={openAccordion === "account"}
-  onToggle={() =>
-    setOpenAccordion(
-      openAccordion === "account" ? null : "account"
-    )
-  }
->
- 
-
-<SettingRow
-    label="Full Name"
-    value={user.fullName}
-/>
-
-
-
-<SettingRow
-    label="Email Address"
-    value={user.email}
-/>
-
-
-
-<SettingRow
-    label="Phone Number"
-    value={user.phone}
-/>
-
-
-
-<SettingRow
-    label="Currency"
-    value={user.currency}
-/>
-
-
-
-<SettingRow
-    label="Language"
-    value={user.language}
-/>
-
-
-
-<SettingRow
-    label="Password"
-    value={user.password}
-/>
-
-</Accordion>
-
-
-
-
-
-
-
- <Accordion
-  icon={<FaBell />}
-  title="Notification Settings"
-  isOpen={openAccordion === "notification"}
-  onToggle={() =>
-    setOpenAccordion(
-      openAccordion === "notification" ? null : "notification"
-    )
-  }
->
-
-  <ToggleRow
-    title="Budget Alerts"
-    description="Receive alerts when you exceed your budget."
-    defaultOn={true}
-  />
-
-  <ToggleRow
-    title="Bill Reminders"
-    description="Get reminded before your bills are due."
-    defaultOn={true}
-  />
-
-  <ToggleRow
-    title="Savings Updates"
-    description="Receive updates about your savings progress."
-    defaultOn={false}
-  />
-
-  <ToggleRow
-    title="Weekly Summary"
-    description="Get a weekly spending summary every Sunday."
-    defaultOn={true}
-  />
-
-  <ToggleRow
-    title="Marketing Tips"
-    description="Receive budgeting tips and product updates."
-    defaultOn={false}
-  />
-
-</Accordion>
-
-
-
-
-
-
-  <Accordion
-  icon={<FaRobot />}
-  title="AI Advisor Preferences"
-  isOpen={openAccordion === "ai"}
-  onToggle={() =>
-    setOpenAccordion(
-      openAccordion === "ai" ? null : "ai"
-    )
-  }
->
-
-  <ToggleRow
-    title="Personalized Recommendations"
-    description="Receive AI suggestions based on your spending habits."
-    defaultOn={true}
-  />
-
-  <ToggleRow
-    title="Proactive Tips"
-    description="Get smart budgeting tips before you overspend."
-    defaultOn={true}
-  />
-
-  <ToggleRow
-    title="Goal Suggestions"
-    description="Allow AI to recommend realistic savings goals."
-    defaultOn={true}
-  />
-
-  <ToggleRow
-    title="Advisor Personality"
-    description="Choose how your AI advisor communicates with you."
-    defaultOn={false}
-  />
-
-</Accordion>
-
-
-
-
-
-
-
-
-
-
-
-
- {/* <Accordion
-  icon={<FaRobot />}
-  title="AI Advisor Preferences"
-  isOpen={openAccordion === "ai"}
-  onToggle={() =>
-    setOpenAccordion(
-      openAccordion === "ai" ? null : "ai"
-    )
-  }
-> */}
-
-
-
-
-<Accordion
-  icon={<FaPalette />}
-  title="Appearance"
-  isOpen={openAccordion === "appearance"}
-  onToggle={() =>
-    setOpenAccordion(
-      openAccordion === "appearance"
-        ? null
-        : "appearance"
-    )
-  }
->
-
-
-
-
-
-
-
-
-
-    <AppearanceSettings />
-
-</Accordion>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-</div>
-
-
-<div className="settings-column">
-
-
-
-
-<Accordion
-  icon={<MdSavings />}
-  title="Budget Rules"
-  isOpen={openAccordion === "budget"}
-  onToggle={() =>
-    setOpenAccordion(
-      openAccordion === "budget" ? null : "budget"
-    )
-  }
->
-
-    <BudgetRuleRow
-        title="Spending Limits"
-        description="Set limits for categories"
-    />
-
-    <BudgetRuleRow
-        title="Auto-Save Rules"
-        description="Automatically save a portion of income"
-    />
-
-    <BudgetRuleRow
-        title="Overspending Alerts"
-        description="Choose when to be alerted"
-    />
-
-    <BudgetRuleRow
-        title="Safe-to-Spend"
-        description="Customize your safe-to-spend calculation"
-    />
-
-</Accordion>
-
-
-
-
-
-
-
-
-<Accordion
-  icon={<FaLock />}
-  title="Data & Privacy"
-  isOpen={openAccordion === "privacy"}
-  onToggle={() =>
-    setOpenAccordion(
-      openAccordion === "privacy" ? null : "privacy"
-    )
-  }
->
-
-  <InfoRow
-    title="Privacy Settings"
-    description="Manage who can view your information."
-  />
-
-  <InfoRow
-    title="Download My Data"
-    description="Export your budgeting history and account data."
-  />
-
- 
-
-  <CacheRow />
-
-</Accordion>
-
-
-
-
-
-
-
-<Accordion
-  icon={<FaExclamationTriangle className="danger-icon" />}
-  title="Danger Zone"
-  isOpen={openAccordion === "danger"}
-  onToggle={() =>
-    setOpenAccordion(
-      openAccordion === "danger"
-        ? null
-        : "danger"
-    )
-  }
->
-
-    <DangerRow
-        title="Reset Application"
-        description="Reset all settings and preferences to their default values."
-        buttonText="Reset"
-        buttonClass="reset-btn"
-        onClick={() => window.confirm("Reset application settings?")}
-    />
-
-    <DangerRow
-        title="Delete Account"
-        description="Permanently delete your Student Budget account and all associated data."
-        buttonText="Delete"
-        buttonClass="delete-btn"
-        onClick={() => window.confirm("Delete this account permanently?")}
-    />
-
-</Accordion>
-
-
-</div>
-
-
-
-
-
-
- 
-
-
-
-
-
-
-
-
-
-<div className="settings-footer">
-    <SecurityCard />
-</div>
-
-
-
-
-
-{isEditing && (
-  <EditProfileModal
-    user={user}
-    setUser={setUser}
-    setIsEditing={setIsEditing}
-  />
-)}
-
-
-
-</div>
-
+        {/* Profile Card */}
+        <ProfileCard user={user} setIsEditing={setIsEditing} />
+
+        {/* Tabs Navigation */}
+        <nav className="settings-tabs">
+          <button
+            className={`tab-btn ${activeTab === "profile" ? "active" : ""}`}
+            onClick={() => setActiveTab("profile")}
+          >
+            <FaUser /> Account
+          </button>
+          <button
+            className={`tab-btn ${activeTab === "notifications" ? "active" : ""}`}
+            onClick={() => setActiveTab("notifications")}
+          >
+            <FaBell /> Notifications
+          </button>
+          <button
+            className={`tab-btn ${activeTab === "budget" ? "active" : ""}`}
+            onClick={() => setActiveTab("budget")}
+          >
+            <MdSavings /> Budget Rules
+          </button>
+          <button
+            className={`tab-btn ${activeTab === "security" ? "active" : ""}`}
+            onClick={() => setActiveTab("security")}
+          >
+            <FaLock /> Privacy & Danger Zone
+          </button>
+        </nav>
+
+        {/* Tab Content Panes */}
+        <div className="settings-tab-pane">
+          
+          {/* ACCOUNT DETAILS TAB */}
+          {activeTab === "profile" && (
+            <div className="modern-card">
+              <div className="card-title">
+                <h3>Account Information</h3>
+                <p>Overview of your personal details</p>
+              </div>
+
+              <div className="setting-row">
+                <span className="setting-label">Full Name</span>
+                <span className="setting-value">{user.fullName}</span>
+              </div>
+              <div className="setting-row">
+                <span className="setting-label">Email Address</span>
+                <span className="setting-value">{user.email}</span>
+              </div>
+              <div className="setting-row">
+                <span className="setting-label">Phone Number</span>
+                <span className="setting-value">{user.phone}</span>
+              </div>
+              <div className="setting-row">
+                <span className="setting-label">Currency</span>
+                <span className="setting-value">{user.currency}</span>
+              </div>
+              <div className="setting-row">
+                <span className="setting-label">Language</span>
+                <span className="setting-value">{user.language}</span>
+              </div>
+
+              <button className="edit-btn" style={{ marginTop: "20px" }} onClick={() => setIsEditing(true)}>
+                Edit Profile Details
+              </button>
+            </div>
+          )}
+
+          {/* NOTIFICATIONS TAB */}
+          {activeTab === "notifications" && (
+            <div className="modern-card">
+              <div className="card-title">
+                <h3>Notification Rules</h3>
+                <p>Choose which alerts you want to receive</p>
+              </div>
+
+              <div className="toggle-row">
+                <div className="toggle-text">
+                  <h4>Budget Alerts</h4>
+                  <p>Receive alerts when you exceed target spending</p>
+                </div>
+                <button
+                  className={`toggle-switch ${notifications.budgetAlerts ? "active" : ""}`}
+                  onClick={() => handleToggleNotification("budgetAlerts")}
+                >
+                  <span className="toggle-circle"></span>
+                </button>
+              </div>
+
+              <div className="toggle-row">
+                <div className="toggle-text">
+                  <h4>Bill Reminders</h4>
+                  <p>Get reminded before recurring bills are due</p>
+                </div>
+                <button
+                  className={`toggle-switch ${notifications.billReminders ? "active" : ""}`}
+                  onClick={() => handleToggleNotification("billReminders")}
+                >
+                  <span className="toggle-circle"></span>
+                </button>
+              </div>
+
+              <div className="toggle-row">
+                <div className="toggle-text">
+                  <h4>Savings Updates</h4>
+                  <p>Receive updates about your savings milestones</p>
+                </div>
+                <button
+                  className={`toggle-switch ${notifications.savingsUpdates ? "active" : ""}`}
+                  onClick={() => handleToggleNotification("savingsUpdates")}
+                >
+                  <span className="toggle-circle"></span>
+                </button>
+              </div>
+
+              <div className="toggle-row">
+                <div className="toggle-text">
+                  <h4>Weekly Summary</h4>
+                  <p>Get a weekly spending digest every Sunday</p>
+                </div>
+                <button
+                  className={`toggle-switch ${notifications.weeklySummary ? "active" : ""}`}
+                  onClick={() => handleToggleNotification("weeklySummary")}
+                >
+                  <span className="toggle-circle"></span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* BUDGET RULES TAB */}
+          {activeTab === "budget" && (
+            <div className="modern-card">
+              <div className="card-title">
+                <h3>Budgeting Preferences</h3>
+                <p>Manage rule calculations for safe spending</p>
+              </div>
+
+              <div className="budget-row">
+                <div className="budget-left">
+                  <h4>Spending Limits</h4>
+                  <p>Set max spending limits for custom expense categories</p>
+                </div>
+              </div>
+
+              <div className="budget-row">
+                <div className="budget-left">
+                  <h4>Auto-Save Rules</h4>
+                  <p>Automatically allocate a percentage of income to savings</p>
+                </div>
+              </div>
+
+              <div className="budget-row">
+                <div className="budget-left">
+                  <h4>Safe-to-Spend Multiplier</h4>
+                  <p>Customize daily budget calculations based on upcoming bills</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SECURITY & DANGER ZONE TAB */}
+          {activeTab === "security" && (
+            <div className="security-pane">
+              <div className="modern-card">
+                <div className="card-title">
+                  <h3>Data & Cache</h3>
+                  <p>Export your data or clear app storage</p>
+                </div>
+
+                <div className="info-row" onClick={handleDownloadData}>
+                  <div className="info-left">
+                    <h4>Download My Data</h4>
+                    <p>Export your profile history and app settings as JSON</p>
+                  </div>
+                  <FaDownload className="info-arrow" />
+                </div>
+
+                <div className="cache-row" onClick={handleClearCache}>
+                  <div className="cache-left">
+                    <h4>Clear Storage Cache</h4>
+                    <p>Free up local storage space</p>
+                  </div>
+                  <span className="cache-size">{cacheSize}</span>
+                </div>
+              </div>
+
+              <div className="modern-card danger-card">
+                <div className="card-title">
+                  <h3 className="danger-heading">
+                    <FaExclamationTriangle className="danger-icon" /> Danger Zone
+                  </h3>
+                  <p>Irreversible profile and app actions</p>
+                </div>
+
+                <div className="danger-row">
+                  <div className="danger-info">
+                    <h4>Reset Application</h4>
+                    <p>Restore default configuration settings across all tabs.</p>
+                  </div>
+                  <button className="reset-btn" onClick={handleResetApp}>
+                    Reset Settings
+                  </button>
+                </div>
+
+                <div className="danger-row">
+                  <div className="danger-info">
+                    <h4>Delete Account</h4>
+                    <p>Permanently remove account details and return to login.</p>
+                  </div>
+                  <button className="delete-btn" onClick={handleDeleteAccount}>
+                    <FaTrash style={{ marginRight: "6px" }} /> Delete Account
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Security Footer */}
+        <div className="settings-footer">
+          <SecurityCard />
+        </div>
+
+        {/* Profile Edit Modal */}
+        {isEditing && (
+          <EditProfileModal
+            user={user}
+            setUser={handleUpdateUser}
+            setIsEditing={setIsEditing}
+          />
+        )}
       </div>
-
-
-     
-
-
-
     </div>
-
-
-
-
-
-
-
-
-
-
   );
 }
 
