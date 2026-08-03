@@ -1,1 +1,320 @@
+:root {
+  --primary-color: #6c3df4;
+  --primary-color-rgb: 108, 61, 244;
+}
 
+/* ---------------------------------------------------
+   1. GLOBAL BUTTONS & CALL-TO-ACTIONS
+--------------------------------------------------- */
+button.primary-btn,
+button.advisor-btn,
+button.edit-btn,
+button.save-btn,
+button.add-btn,
+button.chat-now-btn,
+.ask-ai-btn,
+.btn-primary {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+/* Outline / Ghost buttons */
+button.outline-btn,
+.btn-outline {
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+}
+
+/* ---------------------------------------------------
+   2. NAVIGATION & SIDEBAR ACTIVE STATES
+--------------------------------------------------- */
+/* Sidebar active link background & text */
+.sidebar .nav-link.active,
+.sidebar .nav-item.active,
+.sidebar-item.active {
+  background-color: rgba(var(--primary-color-rgb), 0.12) !important;
+  color: var(--primary-color) !important;
+  border-left: 4px solid var(--primary-color) !important;
+}
+
+.sidebar .nav-link.active svg,
+.sidebar .nav-item.active svg {
+  color: var(--primary-color) !important;
+}
+
+/* Topbar / Tabs navigation */
+.tab-btn.active,
+.nav-tabs .active {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+/* ---------------------------------------------------
+   3. BADGES, TAGS & HIGHLIGHTS
+--------------------------------------------------- */
+.badge-primary,
+.status-pill.active,
+.tag.selected,
+.user-role-badge {
+  background-color: rgba(var(--primary-color-rgb), 0.15) !important;
+  color: var(--primary-color) !important;
+}
+
+/* Text links & highlighted text */
+a,
+.link-text,
+.text-primary,
+.highlight {
+  color: var(--primary-color) !important;
+}
+
+/* ---------------------------------------------------
+   4. FORM CONTROLS & SELECTIONS
+--------------------------------------------------- */
+/* Input focus rings */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.2) !important;
+}
+
+/* Toggle Switches */
+.toggle-switch.active {
+  background-color: var(--primary-color) !important;
+}
+
+/* Checkboxes and Radio buttons */
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+  accent-color: var(--primary-color) !important;
+}
+
+/* ---------------------------------------------------
+   5. PROGRESS BARS & CHARTS ACCENTS
+--------------------------------------------------- */
+.progress-bar-fill,
+.meter-fill,
+.chart-bar-highlight {
+  background-color: var(--primary-color) !important;
+}
+/* ==========================================================================
+   GLOBAL ACCENT COLOR OVERRIDES FOR ALL PAGES & SIDEBAR
+   ========================================================================== */
+
+/* 1. SIDEBAR & NAVIGATION */
+.sidebar,
+aside,
+nav {
+  /* Active menu items & links */
+  .nav-item.active,
+  .nav-link.active,
+  .sidebar-link.active,
+  .active-tab {
+    background-color: rgba(var(--primary-color-rgb), 0.12) !important;
+    color: var(--primary-color) !important;
+    border-left-color: var(--primary-color) !important;
+
+    svg, i, span {
+      color: var(--primary-color) !important;
+    }
+  }
+
+  /* Sidebar Help/Ask Card & Buttons */
+  .need-help-card,
+  .sidebar-card {
+    button, .chat-btn, .ask-btn {
+      background-color: var(--primary-color) !important;
+      color: #ffffff !important;
+    }
+  }
+}
+
+/* 2. BUTTONS ACROSS ALL PAGES (Savings, Bills, Calendar, Reports, Advisor) */
+button.primary,
+button.btn-primary,
+button.add-btn,
+button.save-btn,
+button.submit-btn,
+button.action-btn,
+button.filter-btn.active,
+.ask-ai-btn,
+.advisor-btn,
+.chat-now-btn,
+.add-goal-btn,
+.add-bill-btn,
+.create-plan-btn,
+.send-btn {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+/* Secondary / Outline Buttons */
+button.outline,
+button.btn-outline,
+button.secondary-accent {
+  border-color: var(--primary-color) !important;
+  color: var(--primary-color) !important;
+}
+
+/* 3. CALENDAR & DATES */
+.calendar-container,
+.react-calendar {
+  .react-calendar__tile--active,
+  .react-calendar__tile--hasActive,
+  .selected-date,
+  .day-cell.active {
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+  }
+
+  .today-date,
+  .current-day {
+    color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+  }
+}
+
+/* 4. SAVINGS PLAN & BILLS & REMINDERS */
+.savings-page,
+.bills-page,
+.spending-page {
+  /* Progress bars & fill meters */
+  .progress-bar-fill,
+  .progress-fill,
+  .meter-fill,
+  .savings-progress-bar {
+    background-color: var(--primary-color) !important;
+  }
+
+  /* Status pills & category tags */
+  .tag.active,
+  .category-pill.active,
+  .status-badge.paid,
+  .pill-highlight {
+    background-color: rgba(var(--primary-color-rgb), 0.15) !important;
+    color: var(--primary-color) !important;
+  }
+}
+
+/* 5. REPORTS & CHARTS */
+.reports-page {
+  .chart-bar-active,
+  .highlight-metric,
+  .summary-card.active {
+    border-color: var(--primary-color) !important;
+  }
+
+  .metric-value.primary,
+  .report-accent-text {
+    color: var(--primary-color) !important;
+  }
+}
+
+/* 6. ASK ADVISOR (CHAT INTERFACE) */
+.advisor-page,
+.chat-container {
+  .user-message,
+  .chat-bubble.user {
+    background-color: var(--primary-color) !important;
+    color: #ffffff !important;
+  }
+
+  .prompt-chip,
+  .suggestion-btn {
+    border-color: var(--primary-color) !important;
+    color: var(--primary-color) !important;
+
+    &:hover {
+      background-color: rgba(var(--primary-color-rgb), 0.1) !important;
+    }
+  }
+
+  .send-icon,
+  .bot-icon-highlight {
+    color: var(--primary-color) !important;
+  }
+}
+
+/* 7. ALL PURPLE TEXT & ICONS (GLOBAL CATCH-ALL) */
+.text-purple,
+.purple-text,
+.accent-text,
+.icon-purple,
+a {
+  color: var(--primary-color) !important;
+}
+
+/* Input Focus Rings across all forms */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary-color) !important;
+  outline-color: var(--primary-color) !important;
+  box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.2) !important;
+}
+/* ==========================================================================
+   ULTIMATE GLOBAL ACCENT OVERRIDE (PUT AT BOTTOM OF INDEX.CSS)
+   ========================================================================== */
+
+/* 1. All Active Sidebar Items & Sub-links */
+aside a.active,
+aside .active,
+.sidebar a.active,
+.sidebar .active,
+.sidebar-item.active,
+.nav-link.active {
+  background-color: rgba(var(--primary-color-rgb), 0.15) !important;
+  color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+aside a.active *,
+.sidebar a.active *,
+.nav-link.active * {
+  color: var(--primary-color) !important;
+}
+
+/* 2. All Primary Action Buttons Across Savings, Bills, Calendar, Reports & Advisor */
+button[class*="primary"],
+button[class*="add"],
+button[class*="save"],
+button[class*="btn-"],
+.btn-primary,
+.ask-advisor-btn,
+.chat-btn,
+.submit-btn,
+.action-btn {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+/* 3. All SVG Icons & Text marked as active/highlighted */
+svg[class*="purple"],
+.icon-active,
+.highlight-text,
+.active-text,
+.primary-text {
+  color: var(--primary-color) !important;
+  fill: var(--primary-color) !important;
+}
+
+/* 4. Active Filter Tags, Calendar Selection, Badges & Tabs */
+.tab.active,
+.filter-tag.active,
+.badge-primary,
+.react-calendar__tile--active,
+.selected-day {
+  background-color: var(--primary-color) !important;
+  color: #ffffff !important;
+}
+
+/* 5. Progress Bars & Meter Highlights */
+.progress-bar-fill,
+.meter-bar,
+.savings-progress {
+  background-color: var(--primary-color) !important;
+}

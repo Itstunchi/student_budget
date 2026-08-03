@@ -1,1 +1,306 @@
-@import "tailwindcss";
+:root {
+  --primary-color: #6c3df4;
+  --primary-color-rgb: 108, 61, 244;
+}
+
+/* ==========================================================================
+   1. GLOBAL RESET & BASE STYLES
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden; /* Clean overflow control without max-width clipping */
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+}
+
+/* ==========================================================================
+   2. GLOBAL BUTTONS & CALL-TO-ACTIONS
+   ========================================================================== */
+button,
+button.primary-btn,
+button.advisor-btn,
+button.edit-btn,
+button.save-btn,
+button.add-btn,
+button.chat-now-btn,
+button.ask-ai-btn,
+button.btn-primary,
+button[class*="primary"],
+button[class*="add"],
+button[class*="save"],
+button[class*="btn-"],
+.ask-advisor-btn,
+.chat-btn,
+.submit-btn,
+.action-btn,
+.add-goal-btn,
+.add-bill-btn,
+.create-plan-btn,
+.send-btn {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+/* Outline & Secondary Buttons */
+button.outline-btn,
+button.btn-outline,
+button.outline,
+button.secondary-accent {
+  background-color: transparent;
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+/* ==========================================================================
+   3. SIDEBAR & NAVIGATION
+   ========================================================================== */
+aside .nav-item.active,
+aside .nav-link.active,
+aside a.active,
+aside .active,
+.sidebar .nav-item.active,
+.sidebar .nav-link.active,
+.sidebar a.active,
+.sidebar .active,
+.sidebar-item.active,
+.active-tab {
+  background-color: rgba(var(--primary-color-rgb), 0.12);
+  color: var(--primary-color);
+  border-left: 4px solid var(--primary-color);
+}
+
+aside a.active *,
+.sidebar a.active *,
+.sidebar .nav-item.active *,
+.sidebar .nav-link.active * {
+  color: var(--primary-color);
+}
+
+.need-help-card,
+.sidebar-card,
+.need-help-card button,
+.sidebar-card button {
+  background-color: var(--primary-color);
+  color: #ffffff;
+}
+
+.tab-btn.active,
+.nav-tabs .active,
+.tab.active {
+  background-color: var(--primary-color);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   4. CALENDAR, DATES & SELECTIONS
+   ========================================================================== */
+.calendar-container,
+.react-calendar,
+.calendar-wrapper {
+  width: 100%;
+  max-width: 100%;
+}
+
+.calendar-container .react-calendar__tile--active,
+.calendar-container .react-calendar__tile--hasActive,
+.calendar-container .selected-date,
+.calendar-container .day-cell.active,
+.react-calendar .react-calendar__tile--active,
+.react-calendar .react-calendar__tile--hasActive,
+.selected-day {
+  background-color: var(--primary-color);
+  color: #ffffff;
+}
+
+.calendar-container .today-date,
+.calendar-container .current-day {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+/* ==========================================================================
+   5. SAVINGS PLAN, BILLS & PROGRESS METER OVERRIDES
+   ========================================================================== */
+.progress-bar-fill,
+.progress-fill,
+.meter-fill,
+.meter-bar,
+.savings-progress-bar,
+.savings-progress {
+  background-color: var(--primary-color);
+}
+
+.tag.active,
+.tag.selected,
+.category-pill.active,
+.status-badge.paid,
+.pill-highlight,
+.filter-tag.active,
+.badge-primary,
+.status-pill.active,
+.user-role-badge {
+  background-color: rgba(var(--primary-color-rgb), 0.15);
+  color: var(--primary-color);
+}
+
+/* ==========================================================================
+   6. ASK ADVISOR (CHAT INTERFACE)
+   ========================================================================== */
+.user-message,
+.chat-bubble.user {
+  background-color: var(--primary-color);
+  color: #ffffff;
+}
+
+.prompt-chip,
+.suggestion-btn {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.prompt-chip:hover,
+.suggestion-btn:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.1);
+}
+
+.send-icon,
+.bot-icon-highlight {
+  color: var(--primary-color);
+}
+
+/* ==========================================================================
+   7. GLOBAL FORMS & ACCENTS
+   ========================================================================== */
+.text-purple,
+.purple-text,
+.accent-text,
+.icon-purple,
+.highlight-text,
+.active-text,
+.primary-text {
+  color: var(--primary-color);
+}
+
+svg[class*="purple"],
+.icon-active {
+  color: var(--primary-color);
+  fill: var(--primary-color);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--primary-color);
+  outline-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.2);
+}
+
+.toggle-switch.active {
+  background-color: var(--primary-color);
+}
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+  accent-color: var(--primary-color);
+}
+
+/* ==========================================================================
+   8. CLEAN RESPONSIVE MEDIA QUERIES
+   ========================================================================== */
+@media screen and (max-width: 768px) {
+
+  /* Ensure page layouts shrink next to sidebars */
+  main, 
+  .main-content, 
+  .page-content,
+  .dashboard-container,
+  .layout-container {
+    flex: 1;
+    min-width: 0; /* Critical for flex items to collapse properly */
+    width: 100%;
+    padding: 12px;
+  }
+
+  /* Prevent iOS Safari auto-zoom on inputs */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* --- BILLS & REMINDERS FIXES --- */
+  .bills-container,
+  .reminders-container,
+  .bills-grid,
+  .reminders-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .bill-card,
+  .reminder-card,
+  .summary-card,
+  .stat-card {
+    width: 100%;
+  }
+
+  /* --- CALENDAR RESPONSIVENESS FIXES --- */
+  .calendar-page-container,
+  .calendar-layout,
+  .calendar-view-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .react-calendar {
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px;
+  }
+
+  .react-calendar__tile {
+    padding: 8px 2px !important;
+    font-size: 12px !important;
+  }
+
+  /* --- DATA TABLES RESPONSIVENESS --- */
+  .table-container,
+  .table-responsive,
+  .table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 16px;
+  }
+
+  table {
+    width: 100%;
+    min-width: 500px; /* Forces table scroll inside wrapper rather than pushing page */
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .bill-card button,
+  .reminder-card button {
+    width: 100%;
+    padding: 10px;
+  }
+}

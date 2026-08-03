@@ -1,168 +1,141 @@
 import React from 'react';
-import { MoreVertical, ChevronDown } from 'lucide-react';
 
-export default function BillList() {
-  // Mock data representing the items shown in the user layout mockup
-  const bills = [
-    {
-      id: 1,
-      title: 'Netflix Subscription',
-      category: 'Entertainment',
-      period: 'Monthly',
-      type: 'Recurring',
-      amount: '₦4,500',
-      dueIn: 'Due in 2 days',
-      status: 'Unpaid',
-      logo: '🍿',
-      bgColor: 'bg-red-50 text-red-600',
-    },
-    {
-      id: 2,
-      title: 'WiFi Subscription',
-      category: 'Internet',
-      period: 'Monthly',
-      type: 'Recurring',
-      amount: '₦7,000',
-      dueIn: 'Due in 5 days',
-      status: 'Upcoming',
-      logo: '🌐',
-      bgColor: 'bg-amber-50 text-amber-600',
-    },
-    {
-      id: 3,
-      title: 'Water Bill',
-      category: 'Utilities',
-      period: 'Monthly',
-      type: null,
-      amount: '₦3,500',
-      dueIn: 'Due in 7 days',
-      status: 'Upcoming',
-      logo: '💧',
-      bgColor: 'bg-amber-50 text-amber-600',
-    },
-    {
-      id: 4,
-      title: 'School Fees (2nd Installment)',
-      category: 'Education',
-      period: null,
-      type: 'One-time',
-      amount: '₦50,000',
-      dueIn: 'Due in 13 days',
-      status: 'Upcoming',
-      logo: '🎓',
-      bgColor: 'bg-amber-50 text-amber-600',
-    },
-    {
-      id: 5,
-      title: 'Electricity Bill',
-      category: 'Utilities',
-      period: 'Monthly',
-      type: null,
-      amount: '₦8,200',
-      dueIn: 'Due in 18 days',
-      status: 'Upcoming',
-      logo: '⚡',
-      bgColor: 'bg-amber-50 text-amber-600',
-    },
-    {
-      id: 6,
-      title: 'House Rent',
-      category: 'Housing',
-      period: 'Monthly',
-      type: 'Recurring',
-      amount: '₦120,000',
-      dueIn: 'Due in 25 days',
-      status: 'Upcoming',
-      logo: '🏠',
-      bgColor: 'bg-green-50 text-green-600',
-    },
-    {
-      id: 7,
-      title: 'Mobile Airtime',
-      category: 'Communication',
-      period: 'Weekly',
-      type: null,
-      amount: '₦1,500',
-      dueIn: 'Due in 2 days',
-      status: 'Unpaid',
-      logo: '📱',
-      bgColor: 'bg-red-50 text-red-600',
-    },
-  ];
+export default function BillList({
+  bills,
+  filter,
+  setFilter,
+  searchQuery,
+  setSearchQuery,
+  selectedCategory,
+  setSelectedCategory,
+  sortBy,
+  setSortBy,
+  onTogglePaid,
+  onDeleteBill,
+  onOpenAddModal,
+}) {
+  const tabs = ['All Bills', 'Recurring', 'One-time', 'Paid', 'Unpaid'];
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-base font-bold text-slate-900 px-1">All Bills</h3>
+    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-6">
+      {/* Filters and Search Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+        <div className="flex items-center gap-2 overflow-x-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setFilter(tab)}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all whitespace-nowrap ${
+                filter === tab
+                  ? 'bg-indigo-50 text-indigo-600 font-semibold'
+                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* Container for rows */}
-      <div className="space-y-3">
-        {bills.map((bill) => (
-          <div
-            key={bill.id}
-            className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow gap-4"
-          >
-            {/* Left: Icon & Meta Info */}
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-slate-50 border border-slate-100 flex items-center justify-center rounded-xl text-xl">
-                {bill.logo}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-semibold text-sm text-slate-800">{bill.title}</h4>
-                  {bill.type && (
-                    <span className="text-[10px] font-medium bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full">
+      <div className="flex flex-col sm:flex-row gap-3">
+        <input
+          type="text"
+          placeholder="Search bills..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1 px-4 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500"
+        />
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="px-4 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500 bg-white"
+        >
+          <option value="All Categories">All Categories</option>
+          <option value="Entertainment">Entertainment</option>
+          <option value="Utilities">Utilities</option>
+          <option value="Housing">Housing</option>
+          <option value="Education">Education</option>
+          <option value="Other">Other</option>
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="px-4 py-2 rounded-xl border border-slate-200 text-sm outline-none focus:border-indigo-500 bg-white"
+        >
+          <option value="Due Date">Sort by: Due Date</option>
+          <option value="Amount">Sort by: Amount</option>
+        </select>
+      </div>
+
+      {/* Bill Items List */}
+      <div className="flex flex-col gap-3">
+        {bills.length === 0 ? (
+          <div className="text-center py-12 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl">
+            <div className="text-4xl mb-3">📄</div>
+            <h3 className="font-semibold text-slate-800 text-lg">No Bills Found</h3>
+            <p className="text-slate-500 text-sm max-w-sm mt-1">
+              You haven't added any bills yet. Click below to add your first bill!
+            </p>
+            <button
+              onClick={onOpenAddModal}
+              className="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-xl font-medium"
+            >
+              + Add Bill
+            </button>
+          </div>
+        ) : (
+          bills.map((bill) => (
+            <div
+              key={bill.id}
+              className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-indigo-100 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-center gap-4">
+                <div className="text-2xl p-3 bg-slate-50 rounded-xl">{bill.icon || '📌'}</div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-semibold text-slate-800">{bill.name}</h4>
+                    <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-600 font-medium">
                       {bill.type}
                     </span>
-                  )}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {bill.category} • Due: {bill.dueDate}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {bill.category} {bill.period && `• ${bill.period}`}
-                </p>
-              </div>
-            </div>
-
-            {/* Right: Pricing, Status, Actions */}
-            <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 pt-3 sm:pt-0">
-              {/* Financial value data */}
-              <div className="text-left sm:text-right">
-                <p className="font-bold text-sm text-slate-900">{bill.amount}</p>
-                <p
-                  className={`text-xs mt-0.5 font-medium ${
-                    bill.status === 'Unpaid' ? 'text-red-500' : 'text-amber-500'
-                  }`}
-                >
-                  {bill.dueIn}
-                </p>
               </div>
 
-              {/* Dynamic Action tags */}
-              <div className="flex items-center gap-3">
-                <span
-                  className={`text-xs font-semibold tracking-wide px-3 py-1 rounded-xl uppercase text-[10px] ${
-                    bill.status === 'Unpaid'
-                      ? 'bg-red-50 text-red-500 border border-red-100'
-                      : bill.status === 'Paid'
-                      ? 'bg-green-50 text-green-500 border border-green-100'
-                      : 'bg-amber-50 text-amber-500 border border-amber-100'
-                  }`}
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className="font-bold text-slate-900">₦{bill.amount.toLocaleString()}</div>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-md font-semibold ${
+                      bill.status === 'Paid'
+                        ? 'bg-emerald-50 text-emerald-600'
+                        : 'bg-amber-50 text-amber-600'
+                    }`}
+                  >
+                    {bill.status}
+                  </span>
+                </div>
+                <button
+                  onClick={() => onTogglePaid(bill.id)}
+                  title="Toggle Status"
+                  className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-indigo-600"
                 >
-                  {bill.status}
-                </span>
-
-                <button className="text-slate-400 hover:text-slate-600 p-1">
-                  <MoreVertical size={16} />
+                  {bill.status === 'Paid' ? '↩️' : '✓'}
+                </button>
+                <button
+                  onClick={() => onDeleteBill(bill.id)}
+                  title="Delete Bill"
+                  className="p-2 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-600"
+                >
+                  🗑️
                 </button>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
-
-      {/* Bottom Load Action Element */}
-      <button className="w-full py-3 bg-white border border-slate-200 hover:bg-slate-50 transition-colors rounded-xl font-medium text-sm text-indigo-600 flex items-center justify-center gap-2 shadow-sm">
-        <span>Load More Bills</span>
-        <ChevronDown size={16} />
-      </button>
     </div>
   );
 }
