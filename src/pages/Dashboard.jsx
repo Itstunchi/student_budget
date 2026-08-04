@@ -60,6 +60,11 @@ function DonutChart({ spent, total }) {
   );
 }
 
+// ─── Canonical storage keys ───
+// These MUST match exactly what SpendingPlanWizard.jsx and SavingsPlan.jsx write to.
+const BUDGET_KEY = "user_budget";
+const SAVINGS_KEY = "user_savings_plans";
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -105,33 +110,44 @@ export default function Dashboard() {
   };
 
   const loadDashboardData = () => {
-    // 1. Load User Info
-    let currentUser = { fullName: "User" };
     try {
       const savedUser = localStorage.getItem("user");
       if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        setUser(currentUser);
+        setUser(JSON.parse(savedUser));
       }
     } catch (e) {
       console.error("Error loading user profile", e);
     }
 
-    // Determine unique storage key prefix for the current user
-    const userKey = currentUser.id || currentUser.email || "guest";
+    // 1. Load the active spending plan.
+    // SpendingPlanWizard.jsx always writes the active plan to BUDGET_KEY ("user_budget"),
+    // so that's the source of truth. "spending_plan" is kept as a legacy fallback only.
+    const savedBudgetRaw =
+      localStorage.getItem(BUDGET_KEY) || localStorage.getItem("spending_plan");
 
-    // 2. Load Budget Data (Scoped to current user)
-    const savedBudget = localStorage.getItem(`user_budget_${userKey}`);
-    if (savedBudget) {
+    if (savedBudgetRaw) {
       try {
-        const parsed = JSON.parse(savedBudget);
-        const computedSpent = parsed.categories && parsed.categories.length > 0 
-          ? calculateTotalSpent(parsed.categories) 
-          : (parsed.spent || 0);
+        const parsed = JSON.parse(savedBudgetRaw);
+
+        // Normalize schema names
+        const rawCategories = parsed.categories || parsed.items || [];
+        const normalizedCategories = rawCategories.map(cat => ({
+          name: cat.name || cat.title || "Uncategorized",
+          amount: Number(cat.amount || cat.allocated || cat.budget || 0),
+          spent: Number(cat.spent || 0)
+        }));
+
+        const totalBudgetVal = Number(parsed.totalBudget || parsed.income || parsed.totalIncome || 0);
+        const plannedVal = Number(parsed.planned || parsed.totalAllocated || parsed.allocated || 0);
+        const computedSpent = calculateTotalSpent(normalizedCategories);
 
         setBudgetData({
-          ...parsed,
-          spent: computedSpent
+          totalBudget: totalBudgetVal,
+          planned: plannedVal,
+          savings: Number(parsed.savings || 0),
+          available: Number(parsed.available ?? (totalBudgetVal - plannedVal) ?? 0),
+          spent: computedSpent,
+          categories: normalizedCategories
         });
       } catch (e) {
         console.error("Error reading saved budget", e);
@@ -147,8 +163,9 @@ export default function Dashboard() {
       });
     }
 
-    // 3. Load Savings Goals (Scoped to current user)
-    const savedGoals = localStorage.getItem(`user_savings_plans_${userKey}`);
+    // 2. Load Savings Goals.
+    // SavingsPlan.jsx always writes the full goals list to SAVINGS_KEY ("user_savings_plans").
+    const savedGoals = localStorage.getItem(SAVINGS_KEY);
     if (savedGoals) {
       try {
         const parsed = JSON.parse(savedGoals);
@@ -174,8 +191,6 @@ export default function Dashboard() {
     };
 
     window.addEventListener("storage", handleStorageChange);
-
-    // Set to 2500ms to allow LoadingScreen's animation to finish
     const timer = setTimeout(() => setLoading(false), 2500);
 
     return () => {
@@ -185,9 +200,8 @@ export default function Dashboard() {
   }, []);
 
   const saveGoalsToStorage = (updatedGoals) => {
-    const userKey = user?.id || user?.email || "guest";
     setSavingsGoals(updatedGoals);
-    localStorage.setItem(`user_savings_plans_${userKey}`, JSON.stringify(updatedGoals));
+    localStorage.setItem(SAVINGS_KEY, JSON.stringify(updatedGoals));
     window.dispatchEvent(new Event("storage"));
   };
 
@@ -247,7 +261,6 @@ export default function Dashboard() {
     }, 800);
   };
 
-  // Render animated LoadingScreen component while loading
   if (loading) {
     return <LoadingScreen />;
   }

@@ -2,6 +2,94 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SpendingPlanWizard.css';
 
+// ─── AI API Keys (same pattern used on the Calendar page) ───
+const GROQ_API_KEY =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) ||
+  (typeof process !== 'undefined' && process.env?.REACT_APP_GROQ_API_KEY) ||
+  '';
+
+const GEMINI_API_KEY =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) ||
+  (typeof process !== 'undefined' && process.env?.REACT_APP_GEMINI_API_KEY) ||
+  '';
+
+// ─── Canonical storage keys — MUST match Dashboard.jsx ───
+const BUDGET_KEY = 'user_budget';
+const SAVED_PLANS_KEY = 'user_spending_plans';
+
+// ─── Generic AI caller: Groq first, Gemini fallback ───
+async function callFinanceAI(systemPrompt, userText) {
+  if (GROQ_API_KEY) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userText },
+          ],
+          temperature: 0.4,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data?.choices?.[0]?.message?.content) {
+        return data.choices[0].message.content;
+      }
+      console.warn('Groq failed, trying Gemini...', data?.error);
+    } catch (err) {
+      console.warn('Groq error, trying Gemini:', err);
+    }
+  }
+
+  if (GEMINI_API_KEY) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemPrompt}\n\nUser: ${userText}` }] }],
+          }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return data.candidates[0].content.parts[0].text;
+      }
+      console.error('Gemini fallback failed:', data?.error);
+    } catch (err) {
+      console.error('Gemini fallback error:', err);
+    }
+  }
+
+  return null;
+}
+
+// ─── Parse the model's JSON reply, tolerating markdown fences / stray text ───
+function parseAiJson(raw) {
+  if (!raw) return null;
+  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
 export default function SpendingPlanWizard() {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('wizard'); // 'wizard' or 'saved'
@@ -24,17 +112,21 @@ export default function SpendingPlanWizard() {
   // Floating AI Chat State
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'bot', text: 'Hello! I am your Spending AI Advisor. You can ask me questions or tell me to edit values (e.g., "Set budget to 150,000" or "Change duration to Weekly").' }
+    {
+      sender: 'bot',
+      text: 'Hello! I am your Spending AI Advisor with full control of this page. You can ask me questions or command me to perform actions (e.g., "Create a plan for 250k", "Delete plan [Name]", "Set budget to 150000", "Change duration to Weekly", or "Switch to saved plans").'
+    }
   ]);
   const [inputMsg, setInputMsg] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
-  
+
   const chatMessagesEndRef = useRef(null);
+  const chatBodyRef = useRef(null);
 
   // Load plans on mount
   useEffect(() => {
-    const plansFromStorage = JSON.parse(localStorage.getItem('user_spending_plans') || '[]');
-    const currentActive = JSON.parse(localStorage.getItem('user_budget') || 'null');
+    const plansFromStorage = JSON.parse(localStorage.getItem(SAVED_PLANS_KEY) || '[]');
+    const currentActive = JSON.parse(localStorage.getItem(BUDGET_KEY) || 'null');
 
     setSavedPlans(plansFromStorage);
     if (currentActive && currentActive.id) {
@@ -42,10 +134,13 @@ export default function SpendingPlanWizard() {
     }
   }, []);
 
-  // Auto scroll chat to bottom
+  // Auto scroll chat to bottom - FIXED
   useEffect(() => {
-    if (isAiOpen) {
-      chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isAiOpen && chatMessagesEndRef.current) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 50);
     }
   }, [chatMessages, isAiTyping, isAiOpen]);
 
@@ -82,42 +177,48 @@ export default function SpendingPlanWizard() {
 
   const syncPlansToStorage = (updatedPlans) => {
     setSavedPlans(updatedPlans);
-    localStorage.setItem('user_spending_plans', JSON.stringify(updatedPlans));
+    localStorage.setItem(SAVED_PLANS_KEY, JSON.stringify(updatedPlans));
+    window.dispatchEvent(new Event('storage'));
   };
 
   // Save new plan and mark as active
-  const handleSaveAndActivatePlan = () => {
-    const needsVal = allocations.find((a) => a.name === 'Needs')?.val || 0;
-    const wantsVal = allocations.find((a) => a.name === 'Wants')?.val || 0;
-    const savingsVal = allocations.find((a) => a.name === 'Savings')?.val || 0;
-    const investVal = allocations.find((a) => a.name === 'Investments')?.val || 0;
+  const handleSaveAndActivatePlan = (customPlan = null) => {
+    let newPlan = customPlan;
 
-    const newPlan = {
-      id: 'plan_' + Date.now(),
-      name: planName.trim() || `${duration} Plan (${formatCurrency(numericAmount)})`,
-      totalBudget: numericAmount,
-      planned: needsVal + wantsVal,
-      savings: savingsVal + investVal,
-      available: numericAmount,
-      spent: 0,
-      duration: duration,
-      createdAt: new Date().toLocaleDateString(),
-      categories: allocations.map((a) => ({
-        name: a.name,
-        amount: a.val,
+    if (!newPlan) {
+      const needsVal = allocations.find((a) => a.name === 'Needs')?.val || 0;
+      const wantsVal = allocations.find((a) => a.name === 'Wants')?.val || 0;
+      const savingsVal = allocations.find((a) => a.name === 'Savings')?.val || 0;
+      const investVal = allocations.find((a) => a.name === 'Investments')?.val || 0;
+
+      newPlan = {
+        id: 'plan_' + Date.now(),
+        name: planName.trim() || `${duration} Plan (${formatCurrency(numericAmount)})`,
+        totalBudget: numericAmount,
+        planned: needsVal + wantsVal,
+        savings: savingsVal + investVal,
+        available: numericAmount,
         spent: 0,
-        color: a.color,
-      })),
-    };
+        duration: duration,
+        createdAt: new Date().toLocaleDateString(),
+        categories: allocations.map((a) => ({
+          name: a.name,
+          amount: a.val,
+          spent: 0,
+          color: a.color,
+        })),
+      };
+    }
 
     const updatedPlans = [...savedPlans, newPlan];
-    syncPlansToStorage(updatedPlans);
+    setSavedPlans(updatedPlans);
+    localStorage.setItem(SAVED_PLANS_KEY, JSON.stringify(updatedPlans));
 
-    localStorage.setItem('user_budget', JSON.stringify(newPlan));
+    localStorage.setItem(BUDGET_KEY, JSON.stringify(newPlan));
     setActivePlanId(newPlan.id);
+    window.dispatchEvent(new Event('storage'));
 
-    alert(`"${newPlan.name}" has been activated and synced to your dashboard!`);
-    navigate('/dashboard');
+    return newPlan;
   };
 
   // --- SAVED PLAN EDITING HANDLERS ---
@@ -127,7 +228,6 @@ export default function SpendingPlanWizard() {
     setEditPlanAmount(plan.totalBudget);
     setEditPlanDuration(plan.duration || 'Monthly');
     
-    // Fallback if older plans didn't have spent per category
     const categoriesWithSpent = (plan.categories || allocations.map(a => ({
       name: a.name,
       amount: plan.totalBudget * (a.percent / 100),
@@ -150,7 +250,6 @@ export default function SpendingPlanWizard() {
   const handleSaveEditedPlan = (planId) => {
     const newTotal = parseFloat(editPlanAmount) || 0;
     
-    // Recalculate allocation amounts if total budget changed, while retaining category spent
     const updatedCategories = editCategories.map((cat) => {
       const allocationConfig = allocations.find(a => a.name === cat.name);
       const percent = allocationConfig ? allocationConfig.percent : 20;
@@ -183,7 +282,7 @@ export default function SpendingPlanWizard() {
         };
 
         if (activePlanId === planId) {
-          localStorage.setItem('user_budget', JSON.stringify(updated));
+          localStorage.setItem(BUDGET_KEY, JSON.stringify(updated));
         }
 
         return updated;
@@ -196,20 +295,121 @@ export default function SpendingPlanWizard() {
   };
 
   const handleSetActivePlan = (plan) => {
-    localStorage.setItem('user_budget', JSON.stringify(plan));
+    localStorage.setItem(BUDGET_KEY, JSON.stringify(plan));
     setActivePlanId(plan.id);
-    alert(`"${plan.name}" is now active on your dashboard!`);
+    window.dispatchEvent(new Event('storage'));
   };
 
   const handleDeletePlan = (planId) => {
     const updated = savedPlans.filter((p) => p.id !== planId);
     syncPlansToStorage(updated);
     if (activePlanId === planId) {
-      localStorage.removeItem('user_budget');
+      localStorage.removeItem(BUDGET_KEY);
       setActivePlanId(null);
+    }
+    window.dispatchEvent(new Event('storage'));
+  };
+
+  // ─── AI CONTEXT + ACTION EXECUTION ───
+
+  const buildAiContext = () => ({
+    step,
+    viewMode,
+    draftAmount: numericAmount,
+    draftDuration: duration,
+    savedPlans: savedPlans.map((p) => ({
+      name: p.name,
+      totalBudget: p.totalBudget,
+      duration: p.duration,
+      spent: p.spent || 0,
+      available: p.available ?? p.totalBudget,
+      isActive: p.id === activePlanId,
+    })),
+  });
+
+  const buildSystemPrompt = (context) => `You are the AI Spending Plan Assistant embedded inside a budgeting app page. You can answer questions AND control the page for the user.
+
+Current page state (JSON): ${JSON.stringify(context)}
+
+You must reply with ONLY raw JSON (no markdown fences, no extra commentary) in exactly this shape:
+{"reply": "short, personalized, conversational answer", "action": null}
+or
+{"reply": "short, personalized confirmation of what you did", "action": {"type": "CREATE_PLAN", "amount": 250000, "name": "My Plan", "duration": "Monthly"}}
+
+Valid action types: "CREATE_PLAN", "DELETE_PLAN", "SET_ACTIVE_PLAN", "SET_AMOUNT", "SET_DURATION", "SWITCH_VIEW".
+- CREATE_PLAN needs "amount" (number), optionally "name" and "duration".
+- DELETE_PLAN and SET_ACTIVE_PLAN need "name" matched to the closest saved plan name in the state above.
+- SET_AMOUNT needs "amount" (number).
+- SET_DURATION needs "duration", one of Daily/Weekly/Monthly/Yearly.
+- SWITCH_VIEW needs "view", one of "wizard" or "saved".
+- Only include an action when the user is clearly asking you to perform it. Otherwise "action" must be null.
+- Base your reply strictly on the real numbers in the state above. Never invent figures.`;
+
+  const findPlanByName = (name) => {
+    if (!name) return null;
+    const lower = name.toLowerCase();
+    return (
+      savedPlans.find((p) => p.name.toLowerCase().includes(lower)) ||
+      (savedPlans.length === 1 ? savedPlans[0] : null)
+    );
+  };
+
+  const executeAction = (action) => {
+    if (!action || !action.type) return;
+
+    switch (action.type) {
+      case 'CREATE_PLAN': {
+        const amt = Number(action.amount) || numericAmount;
+        if (amt > 0) {
+          handleSaveAndActivatePlan({
+            id: 'plan_' + Date.now(),
+            name: action.name || `${action.duration || duration} Plan (${formatCurrency(amt)})`,
+            totalBudget: amt,
+            planned: amt * 0.6,
+            savings: amt * 0.3,
+            available: amt,
+            spent: 0,
+            duration: action.duration || duration || 'Monthly',
+            createdAt: new Date().toLocaleDateString(),
+            categories: allocations.map((a) => ({
+              name: a.name,
+              amount: amt * (a.percent / 100),
+              spent: 0,
+              color: a.color,
+            })),
+          });
+          setViewMode('saved');
+        }
+        break;
+      }
+      case 'DELETE_PLAN': {
+        const target = findPlanByName(action.name);
+        if (target) handleDeletePlan(target.id);
+        break;
+      }
+      case 'SET_ACTIVE_PLAN': {
+        const target = findPlanByName(action.name);
+        if (target) handleSetActivePlan(target);
+        break;
+      }
+      case 'SET_AMOUNT': {
+        if (action.amount) setAmount(String(action.amount));
+        break;
+      }
+      case 'SET_DURATION': {
+        if (action.duration) setDuration(action.duration);
+        break;
+      }
+      case 'SWITCH_VIEW': {
+        if (action.view) setViewMode(action.view);
+        break;
+      }
+      default:
+        break;
     }
   };
 
+  // --- FULL INTERACTIVE AI COMMAND HANDLER ---
   const handleSendAiMessage = async () => {
     if (!inputMsg.trim()) return;
 
@@ -218,73 +418,30 @@ export default function SpendingPlanWizard() {
     setInputMsg('');
     setIsAiTyping(true);
 
-    const lowerText = userText.toLowerCase();
+    const context = buildAiContext();
+    const systemPrompt = buildSystemPrompt(context);
+    const rawReply = await callFinanceAI(systemPrompt, userText);
+    const parsed = parseAiJson(rawReply);
 
-    if (lowerText.includes('set budget') || lowerText.includes('change budget') || lowerText.includes('amount to')) {
-      const match = userText.match(/\d[\d,.]*/);
-      if (match) {
-        const parsedVal = match[0].replace(/,/g, '');
-        setAmount(parsedVal);
-        setIsAiTyping(false);
-        setChatMessages((prev) => [
-          ...prev,
-          { sender: 'bot', text: `I have updated your total plan budget to ${formatCurrency(parseFloat(parsedVal))}.` }
-        ]);
-        return;
+    if (parsed && parsed.reply) {
+      if (parsed.action) {
+        executeAction(parsed.action);
       }
+      setChatMessages((prev) => [...prev, { sender: 'bot', text: parsed.reply }]);
+    } else if (rawReply) {
+      // Model replied with plain text instead of the JSON contract — show it as-is.
+      setChatMessages((prev) => [...prev, { sender: 'bot', text: rawReply }]);
+    } else {
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          sender: 'bot',
+          text: "I couldn't reach the AI service right now. Please check your Groq or Gemini API key, or try again in a moment.",
+        },
+      ]);
     }
 
-    if (lowerText.includes('change duration') || lowerText.includes('set duration')) {
-      let foundDuration = null;
-      if (lowerText.includes('daily')) foundDuration = 'Daily';
-      else if (lowerText.includes('weekly')) foundDuration = 'Weekly';
-      else if (lowerText.includes('monthly')) foundDuration = 'Monthly';
-      else if (lowerText.includes('yearly')) foundDuration = 'Yearly';
-
-      if (foundDuration) {
-        setDuration(foundDuration);
-        setIsAiTyping(false);
-        setChatMessages((prev) => [
-          ...prev,
-          { sender: 'bot', text: `I have set your spending plan duration to ${foundDuration}.` }
-        ]);
-        return;
-      }
-    }
-
-    const apiUrl = 
-      (typeof process !== 'undefined' && process.env?.REACT_APP_API_URL) || 
-      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) || 
-      '/api/ai-spending-advisor';
-
-    try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userText,
-          currentBudget: numericAmount,
-          duration: duration
-        }),
-      });
-
-      if (!response.ok) throw new Error('API response failed');
-      const data = await response.json();
-
-      setChatMessages((prev) => [...prev, { sender: 'bot', text: data.reply || "Recommendation applied." }]);
-    } catch (err) {
-      setTimeout(() => {
-        setChatMessages((prev) => [
-          ...prev,
-          { 
-            sender: 'bot', 
-            text: `For a ${duration.toLowerCase()} budget of ${formatCurrency(numericAmount)}, allocating 40% for needs, 20% for wants, 20% for savings, 10% for investments, and 10% for others works best. You can tell me to "set budget to [amount]" anytime!` 
-          }
-        ]);
-      }, 800);
-    } finally {
-      setIsAiTyping(false);
-    }
+    setIsAiTyping(false);
   };
 
   return (
@@ -732,7 +889,7 @@ export default function SpendingPlanWizard() {
                   <button className="spw-btn spw-btn-secondary" onClick={handleBack}>
                     Back
                   </button>
-                  <button className="spw-btn spw-btn-primary" onClick={handleSaveAndActivatePlan}>
+                  <button className="spw-btn spw-btn-primary" onClick={() => handleSaveAndActivatePlan()}>
                     Save & Activate Plan →
                   </button>
                 </div>
@@ -759,36 +916,83 @@ export default function SpendingPlanWizard() {
             <div className="spw-ai-modal-header">
               <div className="spw-ai-title">
                 <span className="spw-ai-avatar">🤖</span>
-                <span>AI Spending Advisor</span>
+                <div className="spw-ai-title-text">
+                  <span className="spw-ai-title-main">AI Spending Advisor</span>
+                  <span className="spw-ai-title-sub">Online</span>
+                </div>
               </div>
               <button className="spw-ai-close-btn" onClick={() => setIsAiOpen(false)}>✕</button>
             </div>
 
-            <div className="spw-ai-chat-messages">
+            <div className="spw-ai-chat-body" ref={chatBodyRef}>
+              <div className="spw-chat-date-divider">
+                <span>Today</span>
+              </div>
               {chatMessages.map((msg, index) => (
-                <div key={index} className={`spw-ai-msg ${msg.sender}`}>
-                  {msg.text}
+                <div key={index} className={`spw-chat-bubble-wrapper ${msg.sender}`}>
+                  <div className={`spw-chat-bubble ${msg.sender}`}>
+                    {msg.sender === 'bot' && <span className="spw-chat-avatar">🤖</span>}
+                    <div className="spw-chat-bubble-content">
+                      <p>{msg.text}</p>
+                      <span className="spw-chat-timestamp">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ))}
-              {isAiTyping && <div className="spw-ai-msg bot typing">AI is thinking...</div>}
-              <div ref={chatMessagesEndRef} />
+              {isAiTyping && (
+                <div className="spw-chat-bubble-wrapper bot">
+                  <div className="spw-chat-bubble bot typing">
+                    <span className="spw-chat-avatar">🤖</span>
+                    <div className="spw-typing-indicator">
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={chatMessagesEndRef} style={{ height: '1px', minHeight: '1px' }} />
             </div>
 
-            <div className="spw-ai-input-box">
+            <div className="spw-ai-chat-input-row">
               <input
                 type="text"
-                placeholder="Ask advice or say 'set budget to 150000'..."
+                placeholder="Ask or command the AI..."
                 value={inputMsg}
                 onChange={(e) => setInputMsg(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendAiMessage()}
               />
-              <button onClick={handleSendAiMessage}>Send</button>
+              <button 
+                onClick={handleSendAiMessage}
+                disabled={!inputMsg.trim()}
+                className={inputMsg.trim() ? 'active' : ''}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
             </div>
           </div>
         )}
 
-        <button className="spw-floating-ai-btn" onClick={() => setIsAiOpen(!isAiOpen)}>
-          🤖 AI Advisor
+        <button 
+          className={`spw-floating-ai-btn ${isAiOpen ? 'open' : ''}`} 
+          onClick={() => setIsAiOpen(!isAiOpen)}
+        >
+          {isAiOpen ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          ) : (
+            <>
+              <span className="spw-floating-ai-icon">🤖</span>
+              <span className="spw-floating-ai-label">AI Advisor</span>
+            </>
+          )}
         </button>
       </div>
     </div>

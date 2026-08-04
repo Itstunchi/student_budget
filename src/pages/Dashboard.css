@@ -549,3 +549,122 @@ body {
     grid-template-columns: 1fr;
   }
 }
+/* ============================================
+   SAVINGS PLAN SECTION ON DASHBOARD
+   ============================================ */
+
+.interactive-goal-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all 0.2s ease;
+}
+
+.interactive-goal-card:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.goal-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.goal-edit-form input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  outline: none;
+  font-family: inherit;
+  color: #1e293b;
+}
+
+.goal-edit-form input:focus {
+  border-color: #5334ea;
+  box-shadow: 0 0 0 3px rgba(83, 52, 234, 0.08);
+}
+
+.goal-edit-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.goal-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-small {
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.btn-small.save {
+  background: #5334ea;
+  color: white;
+}
+
+.btn-small.save:hover {
+  background: #4124c7;
+}
+
+.btn-small.cancel {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.btn-small.cancel:hover {
+  background: #e2e8f0;
+}
+
+.icon-action-btn {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.icon-action-btn:hover {
+  color: #5334ea;
+  background: #f3f0ff;
+}
+
+.quick-deposit-btn {
+  padding: 6px 12px;
+  background: #f3f0ff;
+  color: #5334ea;
+  border: 1px solid #e2d9ff;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.quick-deposit-btn:hover {
+  background: #5334ea;
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(83, 52, 234, 0.2);
+}

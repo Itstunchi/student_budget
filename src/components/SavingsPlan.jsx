@@ -1,5 +1,92 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './SavingsPlan.css';
+
+// ─── AI API Keys (same pattern used on the Calendar / Spending Plan pages) ───
+const GROQ_API_KEY =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) ||
+  (typeof process !== 'undefined' && process.env?.REACT_APP_GROQ_API_KEY) ||
+  '';
+
+const GEMINI_API_KEY =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) ||
+  (typeof process !== 'undefined' && process.env?.REACT_APP_GEMINI_API_KEY) ||
+  '';
+
+// ─── Canonical storage key — MUST match Dashboard.jsx ───
+const SAVINGS_KEY = 'user_savings_plans';
+
+// ─── Generic AI caller: Groq first, Gemini fallback ───
+async function callFinanceAI(systemPrompt, userText) {
+  if (GROQ_API_KEY) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: userText },
+          ],
+          temperature: 0.4,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data?.choices?.[0]?.message?.content) {
+        return data.choices[0].message.content;
+      }
+      console.warn('Groq failed, trying Gemini...', data?.error);
+    } catch (err) {
+      console.warn('Groq error, trying Gemini:', err);
+    }
+  }
+
+  if (GEMINI_API_KEY) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemPrompt}\n\nUser: ${userText}` }] }],
+          }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return data.candidates[0].content.parts[0].text;
+      }
+      console.error('Gemini fallback failed:', data?.error);
+    } catch (err) {
+      console.error('Gemini fallback error:', err);
+    }
+  }
+
+  return null;
+}
+
+// ─── Parse the model's JSON reply, tolerating markdown fences / stray text ───
+function parseAiJson(raw) {
+  if (!raw) return null;
+  const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
 
 export default function SavingsPlan() {
   // Main State for Plans
@@ -34,27 +121,38 @@ export default function SavingsPlan() {
   const [chatMessages, setChatMessages] = useState([
     {
       sender: 'bot',
-      text: 'Hi! I am your Savings Assistant. Ask me to add money or update goals (e.g., "Add 5000 to New Laptop" or "Run auto save").',
+      text: 'Hi! I am your Savings Assistant with full control of this page. Ask me questions or command me (e.g., "Add 5000 to New Laptop", "Create a goal for a bike, target 100000", "Delete goal [Name]", "Run auto save").',
     },
   ]);
   const [inputMsg, setInputMsg] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
 
+  // ─── Auto-scroll ref & effect ───
+  const chatMessagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (isAiOpen && chatMessagesEndRef.current) {
+      setTimeout(() => {
+        chatMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 50);
+    }
+  }, [chatMessages, isAiTyping, isAiOpen]);
+
   // Load from localStorage or start empty (no default goal injection)
   useEffect(() => {
-    const rawData = localStorage.getItem('user_savings_plans');
+    const rawData = localStorage.getItem(SAVINGS_KEY);
     if (rawData !== null) {
       setSavingsPlans(JSON.parse(rawData));
     } else {
       setSavingsPlans([]);
-      localStorage.setItem('user_savings_plans', JSON.stringify([]));
+      localStorage.setItem(SAVINGS_KEY, JSON.stringify([]));
     }
   }, []);
 
   // Sync with LocalStorage and Notify Dashboard Component Immediately
   const syncPlansToStorage = (updatedPlans) => {
     setSavingsPlans(updatedPlans);
-    localStorage.setItem('user_savings_plans', JSON.stringify(updatedPlans));
+    localStorage.setItem(SAVINGS_KEY, JSON.stringify(updatedPlans));
     window.dispatchEvent(new Event('storage'));
   };
 
@@ -145,6 +243,12 @@ export default function SavingsPlan() {
     }
   };
 
+  const handleDeleteGoalById = (planId) => {
+    const updated = savingsPlans.filter((p) => p.id !== planId);
+    syncPlansToStorage(updated);
+    if (deleteModalPlanId === planId) setDeleteModalPlanId(null);
+  };
+
   // Smart Auto-Save Handler
   const handleExecuteAutoSave = () => {
     if (savingsPlans.length === 0) {
@@ -208,8 +312,115 @@ export default function SavingsPlan() {
     setNotificationMsg(`Auto-Save Done! Added ${formatCurrency(totalAllocated)} across your savings goals.`);
   };
 
+  // ─── AI CONTEXT + ACTION EXECUTION ───
+
+  const buildAiContext = () => ({
+    autoSaveMode,
+    surplusRate,
+    goals: savingsPlans.map((p) => ({
+      name: p.title,
+      targetAmount: p.targetAmount,
+      currentAmount: p.currentAmount,
+      targetDate: p.targetDate,
+      category: p.category,
+    })),
+  });
+
+  const buildSystemPrompt = (context) => `You are the AI Savings Plan Assistant embedded inside a personal finance app page. You can answer questions AND control the page for the user.
+
+Current page state (JSON): ${JSON.stringify(context)}
+
+Reply with ONLY raw JSON (no markdown fences, no extra commentary) in exactly this shape:
+{"reply": "short personalized conversational answer", "action": null}
+or
+{"reply": "short personalized confirmation of what you did", "action": {"type": "ADD_DEPOSIT", "name": "New Laptop", "amount": 5000}}
+
+Valid action types: "ADD_DEPOSIT", "CREATE_GOAL", "DELETE_GOAL", "EDIT_GOAL", "RUN_AUTOSAVE", "SET_AUTOSAVE_MODE".
+- ADD_DEPOSIT needs "name" (closest matching goal title from the state above) and "amount" (number).
+- CREATE_GOAL needs "name" and "amount" (target amount), optionally "targetDate" (YYYY-MM-DD) and "category".
+- DELETE_GOAL needs "name".
+- EDIT_GOAL needs "name" and any of "amount" (new target) or "targetDate".
+- RUN_AUTOSAVE takes no extra params.
+- SET_AUTOSAVE_MODE needs "mode", one of "surplus"/"daily"/"proportional", and optionally "rate" (5-50).
+- Only include an action when the user clearly asks for it, otherwise "action" must be null.
+- Base your reply strictly on the real numbers in the state above; never invent figures.`;
+
+  const findGoalByName = (name) => {
+    if (!name) return null;
+    const lower = name.toLowerCase();
+    return (
+      savingsPlans.find((p) => p.title.toLowerCase().includes(lower)) ||
+      (savingsPlans.length === 1 ? savingsPlans[0] : null)
+    );
+  };
+
+  const executeAction = (action) => {
+    if (!action || !action.type) return;
+
+    switch (action.type) {
+      case 'ADD_DEPOSIT': {
+        const target = findGoalByName(action.name);
+        const amt = Number(action.amount);
+        if (target && amt > 0) {
+          const updated = savingsPlans.map((p) =>
+            p.id === target.id ? { ...p, currentAmount: p.currentAmount + amt } : p
+          );
+          syncPlansToStorage(updated);
+        }
+        break;
+      }
+      case 'CREATE_GOAL': {
+        const amt = Number(action.amount);
+        if (action.name && amt > 0) {
+          const newPlan = {
+            id: 'sp_' + Date.now(),
+            title: action.name,
+            targetAmount: amt,
+            currentAmount: 0,
+            targetDate: action.targetDate || '2026-12-31',
+            category: action.category || 'General',
+          };
+          syncPlansToStorage([...savingsPlans, newPlan]);
+        }
+        break;
+      }
+      case 'DELETE_GOAL': {
+        const target = findGoalByName(action.name);
+        if (target) handleDeleteGoalById(target.id);
+        break;
+      }
+      case 'EDIT_GOAL': {
+        const target = findGoalByName(action.name);
+        if (target) {
+          const updated = savingsPlans.map((p) =>
+            p.id === target.id
+              ? {
+                  ...p,
+                  targetAmount: action.amount ? Number(action.amount) : p.targetAmount,
+                  targetDate: action.targetDate || p.targetDate,
+                }
+              : p
+          );
+          syncPlansToStorage(updated);
+        }
+        break;
+      }
+      case 'RUN_AUTOSAVE': {
+        handleExecuteAutoSave();
+        break;
+      }
+      case 'SET_AUTOSAVE_MODE': {
+        if (action.mode) setAutoSaveMode(action.mode);
+        if (action.rate) setSurplusRate(Number(action.rate));
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
   // AI Assistant Command Receiver
-  const handleSendAiMessage = () => {
+  const handleSendAiMessage = async () => {
     if (!inputMsg.trim()) return;
 
     const userText = inputMsg.trim();
@@ -217,42 +428,30 @@ export default function SavingsPlan() {
     setInputMsg('');
     setIsAiTyping(true);
 
-    const lowerText = userText.toLowerCase();
+    const context = buildAiContext();
+    const systemPrompt = buildSystemPrompt(context);
+    const rawReply = await callFinanceAI(systemPrompt, userText);
+    const parsed = parseAiJson(rawReply);
 
-    if (lowerText.includes('add') || lowerText.includes('save') || lowerText.includes('deposit')) {
-      const amountMatch = userText.match(/\d[\d,.]*/);
-      if (amountMatch) {
-        const val = parseFloat(amountMatch[0].replace(/,/g, ''));
-        const foundPlan = savingsPlans.find((p) => lowerText.includes(p.title.toLowerCase()));
-
-        if (foundPlan) {
-          const updated = savingsPlans.map((p) => {
-            if (p.id === foundPlan.id) {
-              return { ...p, currentAmount: p.currentAmount + val };
-            }
-            return p;
-          });
-          syncPlansToStorage(updated);
-          setIsAiTyping(false);
-          setChatMessages((prev) => [
-            ...prev,
-            { sender: 'bot', text: `Added ${formatCurrency(val)} to your "${foundPlan.title}" savings goal!` },
-          ]);
-          return;
-        }
+    if (parsed && parsed.reply) {
+      if (parsed.action) {
+        executeAction(parsed.action);
       }
-    }
-
-    setTimeout(() => {
-      setIsAiTyping(false);
+      setChatMessages((prev) => [...prev, { sender: 'bot', text: parsed.reply }]);
+    } else if (rawReply) {
+      // Model replied with plain text instead of the JSON contract — show it as-is.
+      setChatMessages((prev) => [...prev, { sender: 'bot', text: rawReply }]);
+    } else {
       setChatMessages((prev) => [
         ...prev,
         {
           sender: 'bot',
-          text: `I can help you manage your plans. Try telling me "Add 5000 to my goal name" or "Run auto save"!`,
+          text: "I couldn't reach the AI service right now. Please check your Groq or Gemini API key, or try again shortly.",
         },
       ]);
-    }, 600);
+    }
+
+    setIsAiTyping(false);
   };
 
   return (
@@ -521,23 +720,44 @@ export default function SavingsPlan() {
           <div className="sp-ai-chat-modal">
             <div className="sp-ai-modal-header">
               <div className="sp-ai-title">
-                <span>🤖 Savings Assistant</span>
+                <span className="sp-ai-avatar">🤖</span>
+                <div className="sp-ai-title-text">
+                  <span className="sp-ai-title-main">Savings Assistant</span>
+                  <span className="sp-ai-title-sub">Online</span>
+                </div>
               </div>
-              <button className="sp-ai-close-btn" onClick={() => setIsAiOpen(false)}>
-                ✕
-              </button>
+              <button className="sp-ai-close-btn" onClick={() => setIsAiOpen(false)}>✕</button>
             </div>
 
-            <div className="sp-ai-chat-messages">
+            <div className="sp-ai-chat-body">
+              <div className="sp-chat-date-divider"><span>Today</span></div>
               {chatMessages.map((msg, idx) => (
-                <div key={idx} className={`sp-ai-msg ${msg.sender}`}>
-                  {msg.text}
+                <div key={idx} className={`sp-chat-bubble-wrapper ${msg.sender}`}>
+                  <div className={`sp-chat-bubble ${msg.sender}`}>
+                    {msg.sender === 'bot' && <span className="sp-chat-avatar">🤖</span>}
+                    <div className="sp-chat-bubble-content">
+                      <p>{msg.text}</p>
+                      <span className="sp-chat-timestamp">
+                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               ))}
-              {isAiTyping && <div className="sp-ai-msg bot">Updating your goals...</div>}
+              {isAiTyping && (
+                <div className="sp-chat-bubble-wrapper bot">
+                  <div className="sp-chat-bubble bot typing">
+                    <span className="sp-chat-avatar">🤖</span>
+                    <div className="sp-typing-indicator">
+                      <span></span><span></span><span></span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div ref={chatMessagesEndRef} style={{ height: '1px', minHeight: '1px' }} />
             </div>
 
-            <div className="sp-ai-input-box">
+            <div className="sp-ai-chat-input-row">
               <input
                 type="text"
                 placeholder='e.g. "Add 5000 to New Laptop"...'
@@ -545,13 +765,35 @@ export default function SavingsPlan() {
                 onChange={(e) => setInputMsg(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendAiMessage()}
               />
-              <button onClick={handleSendAiMessage}>Send</button>
+              <button
+                onClick={handleSendAiMessage}
+                disabled={!inputMsg.trim()}
+                className={inputMsg.trim() ? 'active' : ''}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
             </div>
           </div>
         )}
 
-        <button className="sp-floating-ai-btn" onClick={() => setIsAiOpen(!isAiOpen)}>
-          🤖 AI Advisor
+        <button
+          className={`sp-floating-ai-btn ${isAiOpen ? 'open' : ''}`}
+          onClick={() => setIsAiOpen(!isAiOpen)}
+        >
+          {isAiOpen ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          ) : (
+            <>
+              <span className="sp-floating-ai-icon">🤖</span>
+              <span className="sp-floating-ai-label">AI Advisor</span>
+            </>
+          )}
         </button>
       </div>
     </div>
