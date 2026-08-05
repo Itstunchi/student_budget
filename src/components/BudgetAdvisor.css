@@ -19,7 +19,7 @@ body, html {
   width: 100vw;
   height: 100vh;
   background-color: #F8F9FC;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* Sidebar Styling (kept for pages that still render their own sidebar) */

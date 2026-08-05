@@ -3,8 +3,9 @@ import { NavLink } from "react-router-dom";
 import logo from "../assets/logo.png";
 import robot from "../assets/robot.png";
 import user from "../assets/user.png";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiMenu } from "react-icons/fi";
+import { Menu, X } from "lucide-react";
 
 import {
   FiHome,
@@ -20,18 +21,45 @@ import {
 } from "react-icons/fi";
 
 function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
-  return (
-    <aside className={`sidebar ${collapsed ? "collapsed" : ""}`}>
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-      <div className="sidebar-header">
+  useEffect(() => {
+    if (sidebarOpen && window.innerWidth <= 768) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+
+  return (
+    <>
+    <button
+      className="menu-btn"
+      onClick={() => setSidebarOpen(!sidebarOpen)}
+    >
+      {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+    </button>
+
+    <aside className={`sidebar ${sidebarOpen ? "open" : "closed"}`}>
+      {sidebarOpen && window.innerWidth <= 768 && (
+        <div
+          className="sidebar-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* <div className="sidebar-header">
           <button
               className="toggle-btn"
-              onClick={() => setCollapsed(!collapsed)}
+              onClick={() => setSidebarOpen(!sidebarOpen)}
           >
               <FiMenu />
           </button>
-      </div>
+      </div> */}
 
       {/* Logo */}
 
@@ -39,7 +67,7 @@ function Sidebar() {
 
        <img src={logo} alt="BudgetBuddy Logo" width="250" />
 
-        {!collapsed && (
+        {!sidebarOpen && (
             <div>
                 <h2>BudgetBuddy</h2>
                 <p>Smart Student Budget</p>
@@ -51,57 +79,58 @@ function Sidebar() {
       {/* Navigation */}
 
       <nav className="menu">
+        <div className="sidebar-content">
+          <NavLink to="/dashboard" className="menu-item">
+            <FiHome />
+            {!sidebarOpen && <span>Dashboard</span>}
+          </NavLink>
 
-        <NavLink to="/dashboard" className="menu-item">
-          <FiHome />
-          {!collapsed && <span>Dashboard</span>}
-        </NavLink>
+          <NavLink to="/spending-plan" className="menu-item">
+            <FiCreditCard />
+            {!sidebarOpen && <span>Spending Plan</span>}
+          </NavLink>
 
-        <NavLink to="/spending-plan" className="menu-item active">
-          <FiCreditCard />
-          {!collapsed && <span>Spending Plan</span>}
-        </NavLink>
+          <NavLink to="/savings" className="menu-item">
+            <FiShield />
+            {!sidebarOpen && <span>Savings Plan</span>}
+          </NavLink>
 
-        <NavLink to="/savings" className="menu-item">
-          <FiShield />
-          {!collapsed && <span>Savings Plan</span>}
-        </NavLink>
+          <NavLink to="/invest" className="menu-item">
+            <FiTrendingUp />
+            {!sidebarOpen && <span>Invest Plan</span>}
+          </NavLink>
 
-        <NavLink to="/invest" className="menu-item">
-          <FiTrendingUp />
-          {!collapsed && <span>Invest Plan</span>}
-        </NavLink>
+          <NavLink to="/bills" className="menu-item">
+            <FiFileText />
+            {!sidebarOpen && <span>Bills & Reminders</span>}
+          </NavLink>
 
-        <NavLink to="/bills" className="menu-item">
-          <FiFileText />
-          {!collapsed && <span>Bills & Reminders</span>}
-        </NavLink>
+          <NavLink to="/calendar" className="menu-item">
+            <FiCalendar />
+            {!sidebarOpen && <span>Calendar</span>}
+          </NavLink>
 
-        <NavLink to="/calendar" className="menu-item">
-          <FiCalendar />
-          {!collapsed && <span>Calendar</span>}
-        </NavLink>
+          <NavLink to="/reports" className="menu-item">
+            <FiFileText />
+            {!sidebarOpen && <span>Reports</span>}
+          </NavLink>
 
-        <NavLink to="/reports" className="menu-item">
-          <FiFileText />
-          {!collapsed && <span>Reports</span>}
-        </NavLink>
+          <NavLink to="/advisor" className="menu-item">
+            <FiMessageCircle />
+            {!sidebarOpen && <span>Ask Advisor</span>}
+          </NavLink>
 
-        <NavLink to="/budgetadvisor" className="menu-item">
-          <FiMessageCircle />
-          {!collapsed && <span>Ask Advisor</span>}
-        </NavLink>
-
-        <NavLink to="/settings" className="menu-item">
-          <FiSettings />
-          {!collapsed && <span>Settings</span>}
-        </NavLink>
+          <NavLink to="/settings" className="menu-item">
+            <FiSettings />
+            {!sidebarOpen && <span>Settings</span>}
+          </NavLink>
+        </div>
 
       </nav>
 
       {/* AI Card */}
 
-      {!collapsed && (
+      {!sidebarOpen && (
       <div className="advisor-card">
 
         <img src={robot} alt="Robot" width="550" />
@@ -124,7 +153,7 @@ function Sidebar() {
 
         <img src={user} alt="User" width="550" />
 
-        {!collapsed && (
+        {!sidebarOpen && (
             <>
                 <div>
 
@@ -139,8 +168,8 @@ function Sidebar() {
             </>
         )}
     </div>
-
     </aside>
+    </>
   );
 }
 

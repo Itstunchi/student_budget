@@ -1,6 +1,8 @@
 // src/BudgetAdvisor.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import './BudgetAdvisor.css'; 
+import Sidebar from "../components/Sidebar";
+import { useNavigate } from "react-router-dom";
 
 export default function BudgetAdvisor() {
   const [messages, setMessages] = useState([]);
@@ -129,6 +131,7 @@ export default function BudgetAdvisor() {
 
   return (
     <div className="budget-container">
+      <Sidebar />
 
       {/* MAIN VIEW AREA */}
       <main className="main-content">

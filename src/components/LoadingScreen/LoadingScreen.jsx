@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import "./LoadingScreen.css";
-
 import robot from "../../assets/robot.png";
 
 const messages = [

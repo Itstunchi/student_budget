@@ -8,22 +8,24 @@ import SpendingPlanWizard from "./components/SpendingPlanWizard";
 import Bills from "./pages/Bills";
 import Settings from "./settings/pages/settings";
 import Dashboard from "./pages/Dashboard";
+import Reports from "./pages/Reports";
 import LoadingScreen from "./components/LoadingScreen/LoadingScreen"
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <Routes>
       <Route path="/" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/advisor" element={<BudgetAdvisor />} />
-      <Route path="/calendar" element={<Calendar />} />
-      <Route path="/spending-plan" element={<SpendingPlanWizard />} />
-       <Route path="/bills" element={<Bills />} />
-      <Route path="/settings" element={<Settings />} />
-      {/* <Route path="/dashboard" element={<Dashboard />} /> */}
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/loading-screen" element={<LoadingScreen />} />
+      <Route path="/signup" element={<ProtectedRoute> <Signup /> </ProtectedRoute> } />
+      <Route path="/forgot-password" element={<ProtectedRoute> <ForgotPassword /> </ProtectedRoute> } />
+      <Route path="/advisor" element={<ProtectedRoute> <BudgetAdvisor /> </ProtectedRoute> } />
+      <Route path="/calendar" element={<ProtectedRoute> <Calendar /> </ProtectedRoute> } />
+      <Route path="/spending-plan" element={<ProtectedRoute> <SpendingPlanWizard /> </ProtectedRoute> } />
+      <Route path="/bills" element={<ProtectedRoute> <Bills /> </ProtectedRoute> } />
+      <Route path="/settings" element={<ProtectedRoute> <Settings /> </ProtectedRoute> } />
+      <Route path="/dashboard" element={<ProtectedRoute> <Dashboard /> </ProtectedRoute> } />
+      <Route path="/reports" element={<ProtectedRoute> <Reports /> </ProtectedRoute> } />
+      <Route path="/loading-screen" element={<ProtectedRoute> <LoadingScreen /> </ProtectedRoute> } />
     </Routes>
   );
 }

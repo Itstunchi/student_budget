@@ -26,6 +26,7 @@ color: var(--text-main);
 max-width: 1200px;
 margin: 0 auto;
 padding: 32px 16px;
+z-index: 1000;
 }
 
 /* Grid Layout for Main Content vs Right Sidebar */

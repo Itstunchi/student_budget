@@ -25,6 +25,14 @@ import "./Dashboard.css";
 import Sidebar from "../components/Sidebar";
 import { useEffect } from "react";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
+import useBudget from "../hooks/useBudget";
+import useTransactions from "../hooks/useTransactions";
+import useBills from "../hooks/useBills";
+import { auth } from "../firebase/firebase";
+import { useNavigate } from "react-router-dom";
+import AddBillModal from "../components/AddBillModal";
+import AddTransactionModal from "../components/AddTransactionModal";
+
 
 const navItems = [
   { icon: Home, label: "Dashboard", active: true },
@@ -38,83 +46,7 @@ const navItems = [
   { icon: MessageCircle, label: "Ask Advisor" },
 ];
 
-const budgetData = [
-  { label: "Needs", percent: 40, amount: "₦48,000", color: "#6C4CE0" },
-  { label: "Wants", percent: 20, amount: "₦24,000", color: "#F04D6A" },
-  { label: "Savings", percent: 20, amount: "₦24,000", color: "#F5A623" },
-  { label: "Investments", percent: 10, amount: "₦12,000", color: "#2ECC71" },
-  { label: "Others", percent: 10, amount: "₦12,000", color: "#4A9DE0" },
-];
-
-const bills = [
-  {
-    icon: <div className="bill-icon netflix">N</div>,
-    name: "Netflix",
-    date: "May 25, 2024",
-    amount: "₦3,500",
-    due: "Due in 2 days",
-    dueClass: "due-soon",
-  },
-  {
-    icon: (
-      <div className="bill-icon wifi">
-        <Wifi size={16} color="#fff" />
-      </div>
-    ),
-    name: "WiFi Subscription",
-    date: "May 28, 2024",
-    amount: "₦7,000",
-    due: "Due in 5 days",
-    dueClass: "due-mid",
-  },
-  {
-    icon: (
-      <div className="bill-icon water">
-        <Droplet size={16} color="#fff" />
-      </div>
-    ),
-    name: "Water Bill",
-    date: "May 30, 2024",
-    amount: "₦4,500",
-    due: "Due in 7 days",
-    dueClass: "due-mid",
-  },
-  {
-    icon: (
-      <div className="bill-icon school">
-        <GraduationCap size={16} color="#fff" />
-      </div>
-    ),
-    name: "School Fees (2nd Installment)",
-    date: "June 5, 2024",
-    amount: "₦50,000",
-    due: "Due in 13 days",
-    dueClass: "due-far",
-  },
-];
-
-const transactions = [
-  {
-    icon: <Coffee size={16} />,
-    name: "Food & Drinks",
-    date: "Today, 10:30 AM",
-    amount: "-₦2,500",
-  },
-  {
-    icon: <Car size={16} />,
-    name: "Transport",
-    date: "Yesterday, 8:45 AM",
-    amount: "-₦500",
-  },
-  {
-    icon: <Smartphone size={16} />,
-    name: "Airtime",
-    date: "Yesterday, 6:20 PM",
-    amount: "-₦200",
-  },
-];
-
-function DonutChart({ data }) {
+function DonutChart({ data, total }) {
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
   let offsetAccum = 0;
@@ -141,7 +73,7 @@ function DonutChart({ data }) {
         );
       })}
       <text x="80" y="75" textAnchor="middle" className="donut-amount">
-        ₦120,000
+        ₦{total.toLocaleString()}
       </text>
       <text x="80" y="95" textAnchor="middle" className="donut-label">
         Spent
@@ -152,6 +84,57 @@ function DonutChart({ data }) {
 
 function Dashboard() {
   const [active, setActive] = useState("Dashboard");
+  const { budget, loading: budgetLoading } = useBudget();
+
+  const [userName, setUserName] = useState("Student");
+  const [greeting, setGreeting] = useState("");
+  const navigate = useNavigate();
+  const [showBillModal, setShowBillModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+
+      const {
+        bills,
+        loading: billsLoading,
+        loadBills,
+      } = useBills();
+
+      const {
+        transactions,
+        loading: transactionLoading,
+        loadTransactions,
+      } = useTransactions();
+
+  const totalBudget = budget?.amount || 0;
+
+const allocations = budget?.allocations || [];
+
+const needs =
+  allocations.find(item => item.category === "Needs")?.amount || 0;
+
+const wants =
+  allocations.find(item => item.category === "Wants")?.amount || 0;
+
+const savings =
+  allocations.find(item => item.category === "Savings")?.amount || 0;
+
+const investments =
+  allocations.find(item => item.category === "Investments")?.amount || 0;
+
+const available =
+  totalBudget - (needs + wants + savings + investments);
+
+// Total amount the user has actually spent
+const spent = transactions.reduce(
+  (total, transaction) => total + Number(transaction.amount || 0),
+  0
+);
+
+// Remaining money after actual spending
+const remainingBalance = totalBudget - spent;
+
+// Budget usage percentage
+const budgetUsed =
+  totalBudget > 0 ? Math.round((spent / totalBudget) * 100) : 0;
 
   const [loading, setLoading] = useState(true);
 
@@ -163,9 +146,48 @@ function Dashboard() {
       return () => clearTimeout(timer);
     }, []);
 
-    if (loading) {
+    useEffect(() => {
+      const user = auth.currentUser;
+
+      if (user) {
+        if (user.displayName) {
+          setUserName(user.displayName);
+        } else if (user.email) {
+          const name = user.email.split("@")[0];
+          setUserName(
+            name.charAt(0).toUpperCase() + name.slice(1)
+          );
+        }
+      }
+
+      const hour = new Date().getHours();
+
+      if (hour < 12) {
+        setGreeting("Good Morning ☀️");
+      } else if (hour < 17) {
+        setGreeting("Good Afternoon 🌤️");
+      } else {
+        setGreeting("Good Evening 🌙");
+      }
+    }, []);
+
+    if (
+      loading ||
+      budgetLoading ||
+      transactionLoading ||
+      billsLoading
+    ) {
       return <LoadingScreen />;
     }
+
+    const budgetData =
+      budget?.allocations?.map((item) => ({
+        label: item.category,
+        percent: item.percentage,
+        amount: item.amount,
+        color: item.color,
+      })) || [];
+      // console.log("Budget from Firestore:", budget);
 
     return (
       <div className="dashboard">
@@ -175,8 +197,12 @@ function Dashboard() {
       <main className="main">
         <header className="topbar">
           <div>
-            <h1>Good morning, Malvin 👋</h1>
-            <p>Here's what's happening with your money today.</p>
+            <h1>
+              {greeting}, {userName} 👋
+            </h1>
+            <p>
+              Welcome back! Here's a summary of your finances today.
+            </p>
           </div>
           <div className="topbar-actions">
             <button className="icon-btn">
@@ -197,32 +223,32 @@ function Dashboard() {
               <Wallet size={18} />
             </div>
             <div className="stat-label">Total Budget</div>
-            <div className="stat-value purple-text">₦150,000</div>
+            <div className="stat-value purple-text">₦{totalBudget.toLocaleString()}</div>
             <div className="stat-sub">This Month</div>
           </div>
           <div className="stat-card">
             <div className="stat-icon green">
               <Calendar size={18} />
             </div>
-            <div className="stat-label green-text">Planned</div>
-            <div className="stat-value green-text">₦120,000</div>
-            <div className="stat-sub">80% of budget</div>
+            <div className="stat-label green-text">Spent</div>
+            <div className="stat-value green-text"> ₦{spent.toLocaleString()} </div>
+            <div className="stat-sub"> {budgetUsed}% of budget used </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon orange">
               <PiggyBank size={18} />
             </div>
-            <div className="stat-label orange-text">To Save / Invest</div>
-            <div className="stat-value orange-text">₦20,000</div>
-            <div className="stat-sub">13% of budget</div>
+            <div className="stat-label orange-text"> Savings Goal </div>
+            <div className="stat-value orange-text"> ₦{(savings + investments).toLocaleString()} </div>
+            <div className="stat-sub"> Planned Savings </div>
           </div>
           <div className="stat-card">
             <div className="stat-icon blue">
               <Wallet size={18} />
             </div>
             <div className="stat-label">Available</div>
-            <div className="stat-value blue-text">₦10,000</div>
-            <div className="stat-sub">7% of budget</div>
+            <div className="stat-value blue-text"> ₦{remainingBalance.toLocaleString()} </div> 
+            <div className="stat-sub"> Available to Spend </div>
           </div>
         </section>
 
@@ -237,7 +263,8 @@ function Dashboard() {
                 </a>
               </div>
               <div className="budget-overview-body">
-                <DonutChart data={budgetData} />
+                {budgetData.length > 0 ? ( <DonutChart data={budgetData}total={totalBudget} /> ) : ( <div className="empty-state"> <h4>No Budget Yet</h4> <p>Create a spending plan to see your budget overview.</p> 
+              </div>)}
                 <ul className="budget-legend">
                   {budgetData.map((item) => (
                     <li key={item.label}>
@@ -247,7 +274,7 @@ function Dashboard() {
                       />
                       <span className="legend-label">{item.label}</span>
                       <span className="legend-percent">{item.percent}%</span>
-                      <span className="legend-amount">{item.amount}</span>
+                      <span className="legend-amount"> ₦{item.amount.toLocaleString()} </span>
                     </li>
                   ))}
                 </ul>
@@ -262,20 +289,26 @@ function Dashboard() {
                 </a>
               </div>
               <ul className="bills-list">
-                {bills.map((bill) => (
-                  <li key={bill.name} className="bill-row">
-                    {bill.icon}
-                    <div className="bill-info">
-                      <div className="bill-name">{bill.name}</div>
-                      <div className="bill-date">{bill.date}</div>
+                {bills.length === 0 ? (
+                  <p>No upcoming bills 🎉</p>
+                ) : (
+                  bills.map((bill) => (
+                    <div className="bill-item" key={bill.id}>
+                      <div className="bill-left">
+                        <div className="bill-icon">📄</div>
+
+                        <div>
+                          <h4>{bill.title}</h4>
+                          <p>{bill.dueDate}</p>
+                        </div>
+                      </div>
+
+                      <div className="bill-right">
+                        <h4>₦{bill.amount.toLocaleString()}</h4>
+                      </div>
                     </div>
-                    <div className="bill-amount">{bill.amount}</div>
-                    <div className={`bill-due ${bill.dueClass}`}>
-                      {bill.due}
-                    </div>
-                    <MoreVertical size={16} className="more-icon" />
-                  </li>
-                ))}
+                  ))
+                )}
               </ul>
             </div>
 
@@ -317,30 +350,57 @@ function Dashboard() {
             <div className="card">
               <h3 className="quick-actions-title">Quick Actions</h3>
               <div className="quick-actions-grid">
-                <button className="quick-action">
+
+                <button
+                  className="quick-action"
+                  onClick={() => navigate("/spending-plan")}
+                >
                   <BarChart3 size={18} />
-                  Spending Plan
+                  <span>Spending Plan</span>
                 </button>
-                <button className="quick-action">
+
+                <button
+                  className="quick-action"
+                  onClick={() => setShowBillModal(true)}
+                >
                   <Calendar size={18} />
-                  Add Reminder
+                  <span>Add Reminder</span>
                 </button>
-                <button className="quick-action">
+
+                <button
+                  className="quick-action"
+                  onClick={() => navigate("/savings")}
+                >
                   <PiggyBank size={18} />
-                  Savings Plan
+                  <span>Savings Plan</span>
                 </button>
-                <button className="quick-action">
+
+                <button
+                  className="quick-action"
+                  onClick={() => navigate("/invest")}
+                  disabled
+                  title="Coming Soon"
+                >
                   <TrendingUp size={18} />
-                  Invest Plan
+                  <span>Invest Plan</span>
                 </button>
-                <button className="quick-action">
+
+                <button
+                  className="quick-action"
+                  onClick={() => setShowTransactionModal(true)}
+                >
                   <FileText size={18} />
-                  Track Bills
+                  Add Transaction
                 </button>
-                <button className="quick-action">
+
+                <button
+                  className="quick-action"
+                  onClick={() => navigate("/reports")}
+                >
                   <BarChart3 size={18} />
-                  View Reports
+                  <span>View Reports</span>
                 </button>
+
               </div>
             </div>
 
@@ -352,21 +412,45 @@ function Dashboard() {
                 </a>
               </div>
               <ul className="transactions-list">
-                {transactions.map((tx) => (
-                  <li key={tx.name} className="transaction-row">
-                    <div className="tx-icon">{tx.icon}</div>
-                    <div className="tx-info">
-                      <div className="tx-name">{tx.name}</div>
-                      <div className="tx-date">{tx.date}</div>
+                {transactions.length === 0 ? (
+                  <p>No recent transactions.</p>
+                ) : (
+                  transactions.slice(0, 5).map((transaction) => (
+                    <div className="transaction-item" key={transaction.id}>
+                      <div className="transaction-icon">
+                        💳
+                      </div>
+
+                      <div className="transaction-details">
+                        <h4>{transaction.title}</h4>
+                        <span>{transaction.category}</span>
+                      </div>
+
+                      <div className="transaction-right">
+                        <strong>-₦{transaction.amount.toLocaleString()}</strong>
+                        <small>
+                          {new Date(transaction.createdAt?.seconds * 1000).toLocaleDateString()}
+                        </small>
+                      </div>
                     </div>
-                    <div className="tx-amount">{tx.amount}</div>
-                  </li>
-                ))}
+                  ))
+                )}
               </ul>
             </div>
           </div>
         </section>
       </main>
+      <AddBillModal
+        isOpen={showBillModal}
+        onClose={() => setShowBillModal(false)}
+        onSaved={loadBills}
+      />
+
+      <AddTransactionModal
+        isOpen={showTransactionModal}
+        onClose={() => setShowTransactionModal(false)}
+        onSaved={loadTransactions}
+      />
       </div>
     );
 }

@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import './SpendingPlanWizard.css';
+import { auth } from "../firebase/firebase";
+import { saveBudget } from "../services/budgetService";
+import { useNavigate } from "react-router-dom";
+import useBudget from "../hooks/useBudget";
+import Sidebar from "../components/Sidebar";
 
 export default function SpendingPlanWizard() {
 const [step, setStep] = useState(1);
 const [amount, setAmount] = useState('');
 const [duration, setDuration] = useState('Monthly');
+const navigate = useNavigate();
 
 // Parse total amount safely
 const numericAmount = parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
@@ -35,6 +41,43 @@ if (step < 4) setStep(step + 1);
 
 const handleBack = () => {
 if (step > 1) setStep(step - 1);
+};
+
+const handleSavePlan = async () => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user) {
+      alert("Please login first.");
+      return;
+    }
+
+    const budgetData = {
+      amount: numericAmount,
+      duration,
+      planType: "AI Balanced Plan",
+
+      allocations: allocations.map((item) => ({
+        category: item.name,
+        amount: item.val,
+        percentage: item.percent,
+        color: item.color,
+        description: item.desc,
+      })),
+    };
+
+    const result = await saveBudget(user.uid, budgetData);
+
+    if (result.success) {
+      navigate("/dashboard");
+    } else {
+      alert(result.message);
+    }
+
+  } catch (error) {
+    console.error(error);
+    alert("Something went wrong.");
+  }
 };
 
 return (
@@ -370,8 +413,11 @@ Continue to Your Plan →
 <button className="spw-btn spw-btn-secondary" onClick={handleBack}>
 Back
 </button>
-<button className="spw-btn spw-btn-primary" onClick={() => alert('Plan activated!')}>
-Start Following Plan →
+<button
+  className="spw-btn spw-btn-primary"
+  onClick={handleSavePlan}
+>
+  Start Following Plan →
 </button>
 </div>
 </div>

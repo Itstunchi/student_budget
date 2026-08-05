@@ -1,6 +1,16 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Calendar.css";
+import { useEffect, } from "react";
+import { auth } from "../firebase/firebase";
+
+import {
+  getEvents,
+  addEvent,
+  updateEvent,
+  deleteEvent,
+} from "../services/calendarService";
+import Sidebar from "../components/Sidebar";
 
 // ─── Icons (inline SVGs) ───
 const Icons = {
@@ -181,17 +191,31 @@ onClose();
 
 // ─── Calendar Event Card ───
 const CalendarEvent = ({ event }) => {
-const colors = categoryColors[event.category] || categoryColors.subscription;
-return (
-<div className="cal-event" style={{ backgroundColor: colors.bg }}>
-<div className="event-dot" style={{ backgroundColor: colors.dot }} />
-<div className="event-info">
-<span className="event-title">{event.title}</span>
-<span className="event-amount">₦{event.amount.toLocaleString()}</span>
-<span className="event-meta">{event.recurrence}</span>
-</div>
-</div>
-);
+  const colors =
+    categoryColors[event.category] ||
+    categoryColors.subscription;
+
+  return (
+    <div
+      className="cal-event"
+      style={{ backgroundColor: colors.bg }}
+    >
+      <div
+        className="event-dot"
+        style={{ backgroundColor: colors.dot }}
+      />
+
+      <div className="event-info">
+        <span className="event-title">
+          {event.title}
+        </span>
+
+        <span className="event-meta">
+          {event.date}
+        </span>
+      </div>
+    </div>
+  );
 };
 
 // ─── Month View ───
@@ -403,7 +427,90 @@ subscription: true, utility: true, internet: true,
 education: true, rent: true, electricity: true,
 });
 
-const events = propEvents || [];
+const [events, setEvents] = useState([]);
+const [loading, setLoading] = useState(true);
+const [editingEvent, setEditingEvent] = useState(null);
+
+const [showModal, setShowModal] = useState(false);
+
+const [formData, setFormData] = useState({
+  title: "",
+  date: "",
+  category: "General",
+  color: "#6C3CF0",
+});
+
+
+
+const loadEvents = async () => {
+  const user = auth.currentUser;
+
+  if (!user) return;
+
+  try {
+    const data = await getEvents(user.uid);
+    setEvents(data);
+  } catch (error) {
+    console.log(error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleChange = (e) => {
+  setFormData({
+    ...formData,
+    [e.target.name]: e.target.value,
+  });
+};
+
+const handleSaveEvent = async () => {
+  const user = auth.currentUser;
+
+  if (!user) return;
+
+  if (!formData.title || !formData.date) {
+    alert("Please fill all required fields.");
+    return;
+  }
+
+  try {
+    if (editingEvent) {
+      await updateEvent(
+        user.uid,
+        editingEvent.id,
+        formData
+      );
+    } else {
+      await addEvent(
+        user.uid,
+        formData
+      );
+    }
+
+    setShowModal(false);
+
+    setEditingEvent(null);
+
+    setFormData({
+      title: "",
+      date: "",
+      category: "General",
+      color: "#6C3CF0",
+    });
+
+    loadEvents();
+
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+useEffect(() => {
+  loadEvents();
+}, []);
+
+
 
 const handlePrev = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
 const handleNext = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
@@ -428,6 +535,14 @@ setFilters((prev) => ({ ...prev, [key]: !prev[key] }));
 const filteredEvents = useMemo(() => {
 return events.filter((e) => filters[e.category] !== false);
 }, [events, filters]);
+
+if (loading) {
+  return (
+    <div className="calendar-loading">
+      Loading calendar...
+    </div>
+  );
+}
 
 return (
 <div className="app-container">
@@ -454,8 +569,8 @@ return (
 </>
 )}
 </div>
-<button className="btn-primary add-reminder-btn" onClick={handleAddReminder}>
-{Icons.plus} Add Reminder
+<button className="btn-primary add-reminder-btn" onClick={() => setShowModal(true)}>
+{Icons.plus} Add Event
 </button>
 </div>
 </div>
@@ -523,6 +638,83 @@ onClick={() => setViewMode(v.toLowerCase())}
 <RightPanel onChatAdvisor={handleChatAdvisor} />
 </div>
 </main>
+
+{showModal && (
+
+<div className="modal-overlay">
+
+<div className="event-modal">
+
+<h2>
+{editingEvent ? "Edit Event" : "Add Event"}
+</h2>
+
+<input
+type="text"
+name="title"
+placeholder="Event title"
+value={formData.title}
+onChange={handleChange}
+/>
+
+<input
+type="date"
+name="date"
+value={formData.date}
+onChange={handleChange}
+/>
+
+<select
+name="category"
+value={formData.category}
+onChange={handleChange}
+>
+
+<option>General</option>
+
+<option>Bills</option>
+
+<option>School</option>
+
+<option>Savings</option>
+
+<option>Investment</option>
+
+<option>Personal</option>
+
+</select>
+
+<input
+type="color"
+name="color"
+value={formData.color}
+onChange={handleChange}
+/>
+
+<div className="modal-buttons">
+
+<button
+onClick={()=>{
+setShowModal(false);
+setEditingEvent(null);
+}}
+>
+Cancel
+</button>
+
+<button
+onClick={handleSaveEvent}
+>
+{editingEvent ? "Update" : "Save"}
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+)}
 </div>
 );
 };
