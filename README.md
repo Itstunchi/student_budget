@@ -18,4 +18,10 @@ If you are developing a production application, we recommend using TypeScript wi
 
 
 
+Joy-Bills and reminders page
+Dalil- SPending and savings page
+Daniel -settings page
+Joseph - Dashboard
+Brian- login page and signup
+Rebbecca - calendar page
 
