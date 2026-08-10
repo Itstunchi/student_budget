@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/settings.css";
 
 import ProfileCard from "../components/ProfileCard";
 import SecurityCard from "../components/SecurityCard";
 import EditProfileModal from "../components/EditProfileModal";
+import NotificationModal from "../components/NotificationModal";
+
+import { auth } from "../../firebase/firebase";
+import { deleteUser } from "firebase/auth";
+import { Loader2 } from "lucide-react";
 
 import {
   FaUser,
@@ -15,9 +20,32 @@ import {
   FaRobot,
   FaDownload,
   FaTrash,
+  FaSignOutAlt,
 } from "react-icons/fa";
 
 import { MdSavings } from "react-icons/md";
+
+// ─── Data isolation keys ───
+const ACTIVE_DATA_KEYS = [
+  "user_budget",
+  "user_savings_plans",
+  "user_spending_plans",
+  "notification_settings",
+  "spending_plan",
+  "bill_reminders",
+  "user_bills",
+];
+
+// Helper for saving current active user data back to their scoped key before logout/switch
+const saveActiveUserData = (email) => {
+  if (!email) return;
+  ACTIVE_DATA_KEYS.forEach((key) => {
+    const val = localStorage.getItem(key);
+    if (val !== null) {
+      localStorage.setItem(`bb_${email}_${key}`, val);
+    }
+  });
+};
 
 // Helper function to read logged-in user data
 const loadLoggedInUser = () => {
@@ -71,6 +99,23 @@ const loadNotificationSettings = () => {
   };
 };
 
+const computeCacheSize = (email) => {
+  let totalChars = 0;
+  ACTIVE_DATA_KEYS.forEach((key) => {
+    const activeVal = localStorage.getItem(key);
+    if (activeVal) totalChars += activeVal.length;
+    if (email) {
+      const scopedVal = localStorage.getItem(`bb_${email}_${key}`);
+      if (scopedVal) totalChars += scopedVal.length;
+    }
+  });
+
+  const kb = totalChars / 1024;
+  if (kb < 1) return "0.0 KB";
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  return `${(kb / 1024).toFixed(2)} MB`;
+};
+
 function Settings() {
   const navigate = useNavigate();
 
@@ -78,7 +123,38 @@ function Settings() {
   const [user, setUser] = useState(loadLoggedInUser);
   const [notifications, setNotifications] = useState(loadNotificationSettings);
   const [isEditing, setIsEditing] = useState(false);
-  const [cacheSize, setCacheSize] = useState("2.4 MB");
+  const [cacheSize, setCacheSize] = useState(() => computeCacheSize(loadLoggedInUser().email));
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // ─── Modal state management ───
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "alert", // "alert" | "confirm"
+    variant: "info", // "info" | "success" | "warning" | "danger"
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+
+  const closeModal = () => {
+    setModalConfig((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  // ─── Live sync when profile changes ───
+  useEffect(() => {
+    const handleProfileChange = () => {
+      const freshUser = loadLoggedInUser();
+      setUser(freshUser);
+      setCacheSize(computeCacheSize(freshUser.email));
+    };
+    window.addEventListener("storage", handleProfileChange);
+    window.addEventListener("profileUpdate", handleProfileChange);
+    return () => {
+      window.removeEventListener("storage", handleProfileChange);
+      window.removeEventListener("profileUpdate", handleProfileChange);
+    };
+  }, []);
 
   // Sync profile update to local storage & trigger live sidebar update
   const handleUpdateUser = (updatedUserData) => {
@@ -88,10 +164,16 @@ function Settings() {
       const merged = { ...existing, ...updatedUserData, name: updatedUserData.fullName, photo: updatedUserData.photo };
       localStorage.setItem("user", JSON.stringify(merged));
       localStorage.setItem("user_profile", JSON.stringify(merged));
+
+      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+      const updatedAccounts = accounts.map((acc) =>
+        acc.email === merged.email ? { ...acc, ...merged } : acc
+      );
+      localStorage.setItem("accounts", JSON.stringify(updatedAccounts));
     } catch (e) {
       localStorage.setItem("user", JSON.stringify(updatedUserData));
     }
-    // Broadcast event for Sidebar & Navbar profile images to update instantly
+
     window.dispatchEvent(new Event("storage"));
     window.dispatchEvent(new CustomEvent("profileUpdate", { detail: updatedUserData }));
   };
@@ -105,10 +187,37 @@ function Settings() {
 
   // Clear application cache
   const handleClearCache = () => {
-    if (window.confirm("Clear non-essential cached data?")) {
-      setCacheSize("0.0 MB");
-      alert("Application cache cleared!");
-    }
+    setModalConfig({
+      isOpen: true,
+      title: "Clear Storage Cache",
+      message: "This will clear all your budget, savings, and spending data. Your profile will be kept. Continue?",
+      type: "confirm",
+      variant: "warning",
+      onConfirm: () => {
+        const email = user?.email;
+
+        ACTIVE_DATA_KEYS.forEach((key) => {
+          localStorage.removeItem(key);
+          if (email) {
+            localStorage.removeItem(`bb_${email}_${key}`);
+          }
+        });
+
+        localStorage.removeItem("spending_plan");
+        setCacheSize(computeCacheSize(email));
+        window.dispatchEvent(new Event("storage"));
+
+        setModalConfig({
+          isOpen: true,
+          title: "Cache Cleared",
+          message: "All account data has been cleared successfully.",
+          type: "alert",
+          variant: "success",
+          onConfirm: closeModal,
+        });
+      },
+      onCancel: closeModal,
+    });
   };
 
   // Download user data
@@ -124,24 +233,151 @@ function Settings() {
 
   // Reset Application
   const handleResetApp = () => {
-    if (window.confirm("Reset all settings to default values?")) {
-      localStorage.clear();
-      alert("Application settings reset.");
-      window.location.reload();
-    }
+    setModalConfig({
+      isOpen: true,
+      title: "Reset Application Settings",
+      message: "Are you sure you want to reset all settings to default values? This clears all local configurations.",
+      type: "confirm",
+      variant: "danger",
+      onConfirm: () => {
+        localStorage.clear();
+        setModalConfig({
+          isOpen: true,
+          title: "Settings Reset",
+          message: "Application settings have been restored to defaults.",
+          type: "alert",
+          variant: "info",
+          onConfirm: () => {
+            closeModal();
+            window.location.reload();
+          },
+        });
+      },
+      onCancel: closeModal,
+    });
+  };
+
+  // Logout Handler
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+
+    setTimeout(async () => {
+      if (user?.email) {
+        saveActiveUserData(user.email);
+      }
+
+      localStorage.removeItem("user");
+      localStorage.removeItem("user_profile");
+      ACTIVE_DATA_KEYS.forEach((key) => localStorage.removeItem(key));
+
+      try {
+        await auth.signOut();
+      } catch (e) {
+        console.error("Firebase signout error:", e);
+      }
+
+      window.dispatchEvent(new Event("storage"));
+      window.dispatchEvent(new Event("profileUpdate"));
+
+      setIsLoggingOut(false);
+      navigate("/login");
+    }, 900);
   };
 
   // Delete Account
   const handleDeleteAccount = () => {
-    if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      localStorage.clear();
-      navigate("/");
+    setModalConfig({
+      isOpen: true,
+      title: "Delete Account",
+      message: "Are you sure you want to delete your account? This action cannot be undone.",
+      type: "confirm",
+      variant: "danger",
+      onConfirm: async () => {
+        const email = user?.email;
+
+        if (email) {
+          const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+          const updatedAccounts = accounts.map((acc) =>
+            acc.email === email ? { ...acc, deletedAt: new Date().toISOString() } : acc
+          );
+          localStorage.setItem("accounts", JSON.stringify(updatedAccounts));
+
+          ACTIVE_DATA_KEYS.forEach((key) => {
+            localStorage.removeItem(`bb_${email}_${key}`);
+            localStorage.removeItem(key);
+          });
+        }
+
+        try {
+          if (auth.currentUser) {
+            await deleteUser(auth.currentUser);
+          }
+        } catch (err) {
+          if (err?.code === "auth/requires-recent-login") {
+            setModalConfig({
+              isOpen: true,
+              title: "Recent Login Required",
+              message: "Your account data was erased and you've been signed out. Firebase requires a recent sign-in to fully delete your auth credentials. Please log in once more to finish removing them.",
+              type: "alert",
+              variant: "warning",
+              onConfirm: () => {
+                closeModal();
+                proceedAccountDeletionCleanup();
+              },
+            });
+            return;
+          } else {
+            console.error("Error deleting Firebase account:", err);
+          }
+        }
+
+        proceedAccountDeletionCleanup();
+      },
+      onCancel: closeModal,
+    });
+  };
+
+  const proceedAccountDeletionCleanup = async () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("user_profile");
+
+    window.dispatchEvent(new Event("storage"));
+    window.dispatchEvent(new Event("profileUpdate"));
+
+    sessionStorage.setItem("bb_show_deleted_msg", "true");
+
+    try {
+      await auth.signOut();
+    } catch (e) {
+      // ignore
     }
+
+    navigate("/login");
   };
 
   return (
-    
     <div className="settings-page">
+      {/* ─── Logout Overlay Loader ─── */}
+      {isLoggingOut && (
+        <div className="account-switch-loading-overlay">
+          <div className="account-switch-loading-card">
+            <Loader2 className="account-switch-spinner" size={26} />
+            <span>Logging out...</span>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Notification & Confirmation Modal ─── */}
+      <NotificationModal
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        variant={modalConfig.variant}
+        onConfirm={modalConfig.onConfirm}
+        onCancel={modalConfig.onCancel || closeModal}
+      />
+
       <div className="settings-container">
         
         {/* Header */}
@@ -365,7 +601,17 @@ function Settings() {
                   <h3 className="danger-heading">
                     <FaExclamationTriangle className="danger-icon" /> Danger Zone
                   </h3>
-                  <p>Irreversible profile and app actions</p>
+                  <p>Irreversible profile and account actions</p>
+                </div>
+
+                <div className="danger-row">
+                  <div className="danger-info">
+                    <h4>Log Out</h4>
+                    <p>Safely end your active session and return to login.</p>
+                  </div>
+                  <button className="reset-btn" onClick={handleLogout} disabled={isLoggingOut}>
+                    <FaSignOutAlt style={{ marginRight: "6px" }} /> Log Out
+                  </button>
                 </div>
 
                 <div className="danger-row">
