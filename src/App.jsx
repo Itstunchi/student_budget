@@ -15,7 +15,16 @@ import Dashboard from "./pages/Dashboard";
 import LoadingScreen from "./components/LoadingScreen/LoadingScreen";
 import Layout from "./components/Layout";
 import Reports from "./pages/Reports";
-// import Report from "./pages/Reports";
+
+const ACTIVE_DATA_KEYS = [
+  "user_budget",
+  "user_savings_plans",
+  "user_spending_plans",
+  "notification_settings",
+  "spending_plan",
+  "bill_reminders",
+  "user_bills",
+];
 
 const hexToRgb = (hex) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -25,6 +34,7 @@ const hexToRgb = (hex) => {
 };
 
 function App() {
+  // ─── Theme Initialization ───
   useEffect(() => {
     const applyTheme = () => {
       const savedColor = localStorage.getItem("primary_theme_color") || "#6c3df4";
@@ -43,9 +53,34 @@ function App() {
     };
   }, []);
 
+  // ─── Session Restoration on Page Reload / Mount ───
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem("user") || localStorage.getItem("user_profile");
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        const email = parsed?.email;
+
+        if (email) {
+          ACTIVE_DATA_KEYS.forEach((key) => {
+            const activeVal = localStorage.getItem(key);
+            const scopedVal = localStorage.getItem(`bb_${email}_${key}`);
+
+            // If active data key is missing or null, restore from scoped user backup
+            if ((activeVal === null || activeVal === undefined) && scopedVal !== null) {
+              localStorage.setItem(key, scopedVal);
+            }
+          });
+          window.dispatchEvent(new Event("storage"));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to restore active user session data:", e);
+    }
+  }, []);
+
   return (
     <ActivityProvider>
-      
       <Routes>
         {/* Standalone Pages without Sidebar */}
         <Route path="/login" element={<Login />} />
@@ -63,8 +98,7 @@ function App() {
           <Route path="/spending-plan" element={<SpendingPlanWizard />} />
           <Route path="/savings-plan" element={<SavingsPlan />} />
           <Route path="/bills" element={<Bills />} />
-          {/* <Route path="/reports" element={<Report />} /> */}
-           <Route path="/reports" element={<Reports />} />
+          <Route path="/reports" element={<Reports />} />
         </Route>
       </Routes>
     </ActivityProvider>

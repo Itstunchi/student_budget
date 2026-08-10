@@ -5,6 +5,7 @@ import "../styles/settings.css";
 import ProfileCard from "../components/ProfileCard";
 import SecurityCard from "../components/SecurityCard";
 import EditProfileModal from "../components/EditProfileModal";
+import NotificationModal from "../components/NotificationModal";
 
 import { auth } from "../../firebase/firebase";
 import { deleteUser } from "firebase/auth";
@@ -125,7 +126,22 @@ function Settings() {
   const [cacheSize, setCacheSize] = useState(() => computeCacheSize(loadLoggedInUser().email));
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // ─── Live sync when profile changes (signup, switch, edit) ───
+  // ─── Modal state management ───
+  const [modalConfig, setModalConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    type: "alert", // "alert" | "confirm"
+    variant: "info", // "info" | "success" | "warning" | "danger"
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+
+  const closeModal = () => {
+    setModalConfig((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  // ─── Live sync when profile changes ───
   useEffect(() => {
     const handleProfileChange = () => {
       const freshUser = loadLoggedInUser();
@@ -171,21 +187,37 @@ function Settings() {
 
   // Clear application cache
   const handleClearCache = () => {
-    if (window.confirm("This will clear all your budget, savings, and spending data. Your profile will be kept. Continue?")) {
-      const email = user?.email;
+    setModalConfig({
+      isOpen: true,
+      title: "Clear Storage Cache",
+      message: "This will clear all your budget, savings, and spending data. Your profile will be kept. Continue?",
+      type: "confirm",
+      variant: "warning",
+      onConfirm: () => {
+        const email = user?.email;
 
-      ACTIVE_DATA_KEYS.forEach((key) => {
-        localStorage.removeItem(key);
-        if (email) {
-          localStorage.removeItem(`bb_${email}_${key}`);
-        }
-      });
+        ACTIVE_DATA_KEYS.forEach((key) => {
+          localStorage.removeItem(key);
+          if (email) {
+            localStorage.removeItem(`bb_${email}_${key}`);
+          }
+        });
 
-      localStorage.removeItem("spending_plan");
-      setCacheSize(computeCacheSize(email));
-      window.dispatchEvent(new Event("storage"));
-      alert("All account data has been cleared successfully.");
-    }
+        localStorage.removeItem("spending_plan");
+        setCacheSize(computeCacheSize(email));
+        window.dispatchEvent(new Event("storage"));
+
+        setModalConfig({
+          isOpen: true,
+          title: "Cache Cleared",
+          message: "All account data has been cleared successfully.",
+          type: "alert",
+          variant: "success",
+          onConfirm: closeModal,
+        });
+      },
+      onCancel: closeModal,
+    });
   };
 
   // Download user data
@@ -201,11 +233,28 @@ function Settings() {
 
   // Reset Application
   const handleResetApp = () => {
-    if (window.confirm("Reset all settings to default values?")) {
-      localStorage.clear();
-      alert("Application settings reset.");
-      window.location.reload();
-    }
+    setModalConfig({
+      isOpen: true,
+      title: "Reset Application Settings",
+      message: "Are you sure you want to reset all settings to default values? This clears all local configurations.",
+      type: "confirm",
+      variant: "danger",
+      onConfirm: () => {
+        localStorage.clear();
+        setModalConfig({
+          isOpen: true,
+          title: "Settings Reset",
+          message: "Application settings have been restored to defaults.",
+          type: "alert",
+          variant: "info",
+          onConfirm: () => {
+            closeModal();
+            window.location.reload();
+          },
+        });
+      },
+      onCancel: closeModal,
+    });
   };
 
   // Logout Handler
@@ -213,24 +262,20 @@ function Settings() {
     setIsLoggingOut(true);
 
     setTimeout(async () => {
-      // 1. Preserve current profile state to user's scoped local keys
       if (user?.email) {
         saveActiveUserData(user.email);
       }
 
-      // 2. Clear current session pointers and active data
       localStorage.removeItem("user");
       localStorage.removeItem("user_profile");
       ACTIVE_DATA_KEYS.forEach((key) => localStorage.removeItem(key));
 
-      // 3. Firebase signout if session exists
       try {
         await auth.signOut();
       } catch (e) {
         console.error("Firebase signout error:", e);
       }
 
-      // 4. Dispatch events to reset app state listeners
       window.dispatchEvent(new Event("storage"));
       window.dispatchEvent(new Event("profileUpdate"));
 
@@ -240,40 +285,59 @@ function Settings() {
   };
 
   // Delete Account
-  const handleDeleteAccount = async () => {
-    if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      return;
-    }
+  const handleDeleteAccount = () => {
+    setModalConfig({
+      isOpen: true,
+      title: "Delete Account",
+      message: "Are you sure you want to delete your account? This action cannot be undone.",
+      type: "confirm",
+      variant: "danger",
+      onConfirm: async () => {
+        const email = user?.email;
 
-    const email = user?.email;
+        if (email) {
+          const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+          const updatedAccounts = accounts.map((acc) =>
+            acc.email === email ? { ...acc, deletedAt: new Date().toISOString() } : acc
+          );
+          localStorage.setItem("accounts", JSON.stringify(updatedAccounts));
 
-    if (email) {
-      const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
-      const updatedAccounts = accounts.map((acc) =>
-        acc.email === email ? { ...acc, deletedAt: new Date().toISOString() } : acc
-      );
-      localStorage.setItem("accounts", JSON.stringify(updatedAccounts));
+          ACTIVE_DATA_KEYS.forEach((key) => {
+            localStorage.removeItem(`bb_${email}_${key}`);
+            localStorage.removeItem(key);
+          });
+        }
 
-      ACTIVE_DATA_KEYS.forEach((key) => {
-        localStorage.removeItem(`bb_${email}_${key}`);
-        localStorage.removeItem(key);
-      });
-    }
+        try {
+          if (auth.currentUser) {
+            await deleteUser(auth.currentUser);
+          }
+        } catch (err) {
+          if (err?.code === "auth/requires-recent-login") {
+            setModalConfig({
+              isOpen: true,
+              title: "Recent Login Required",
+              message: "Your account data was erased and you've been signed out. Firebase requires a recent sign-in to fully delete your auth credentials. Please log in once more to finish removing them.",
+              type: "alert",
+              variant: "warning",
+              onConfirm: () => {
+                closeModal();
+                proceedAccountDeletionCleanup();
+              },
+            });
+            return;
+          } else {
+            console.error("Error deleting Firebase account:", err);
+          }
+        }
 
-    try {
-      if (auth.currentUser) {
-        await deleteUser(auth.currentUser);
-      }
-    } catch (err) {
-      if (err?.code === "auth/requires-recent-login") {
-        alert(
-          "Your account data has been erased and you're signed out, but Firebase needs a recent sign-in to fully delete the credentials. If you log in again, please delete your account once more to finish removing it."
-        );
-      } else {
-        console.error("Error deleting Firebase account:", err);
-      }
-    }
+        proceedAccountDeletionCleanup();
+      },
+      onCancel: closeModal,
+    });
+  };
 
+  const proceedAccountDeletionCleanup = async () => {
     localStorage.removeItem("user");
     localStorage.removeItem("user_profile");
 
@@ -302,6 +366,17 @@ function Settings() {
           </div>
         </div>
       )}
+
+      {/* ─── Notification & Confirmation Modal ─── */}
+      <NotificationModal
+        isOpen={modalConfig.isOpen}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        variant={modalConfig.variant}
+        onConfirm={modalConfig.onConfirm}
+        onCancel={modalConfig.onCancel || closeModal}
+      />
 
       <div className="settings-container">
         

@@ -24,4 +24,5 @@ Daniel -settings page
 Joseph - Dashboard
 Brian- login page and signup
 Rebbecca - calendar page
+David - Report page
 

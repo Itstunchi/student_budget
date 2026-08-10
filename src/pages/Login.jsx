@@ -13,9 +13,29 @@ import {
 import { auth, googleProvider } from "../firebase/firebase";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 
-// ─── Look up this email's full locally-known profile (name, phone, etc.)
-//     from the "accounts" list this browser has previously saved, and
-//     report whether it was marked deleted in Settings. ───
+// ─── Scoped Data Keys managed by Settings.jsx ───
+const ACTIVE_DATA_KEYS = [
+  "user_budget",
+  "user_savings_plans",
+  "user_spending_plans",
+  "notification_settings",
+  "spending_plan",
+  "bill_reminders",
+  "user_bills",
+];
+
+// ─── Restores scoped data (`bb_email_key`) back to active `localStorage` keys upon login ───
+const restoreUserData = (email) => {
+  if (!email) return;
+  ACTIVE_DATA_KEYS.forEach((key) => {
+    const scopedVal = localStorage.getItem(`bb_${email}_${key}`);
+    if (scopedVal !== null) {
+      localStorage.setItem(key, scopedVal);
+    }
+  });
+};
+
+// ─── Look up this email's full locally-known profile from "accounts" ───
 const findLocalAccount = (email) => {
   try {
     const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
@@ -25,9 +45,7 @@ const findLocalAccount = (email) => {
   }
 };
 
-// ─── Restore the full profile (phone, name, currency, etc.) into the
-//     active "user"/"user_profile" keys instead of leaving them stale or
-//     empty after a plain email/password sign-in. ───
+// ─── Restore the full profile & scoped budget data into active storage ───
 const restoreUserSession = (firebaseUser, localAccount) => {
   const restored = localAccount || {
     id: firebaseUser.uid || firebaseUser.email || "user_default",
@@ -42,6 +60,10 @@ const restoreUserSession = (firebaseUser, localAccount) => {
 
   localStorage.setItem("user", JSON.stringify(restored));
   localStorage.setItem("user_profile", JSON.stringify(restored));
+
+  // Restore budget, savings, and settings data scoped to this email
+  restoreUserData(restored.email);
+
   window.dispatchEvent(new Event("storage"));
   return restored;
 };
@@ -52,8 +74,6 @@ const saveGoogleUserLocally = (user) => {
   const lName = nameParts.slice(1).join(" ") || "";
   const combinedFullName = user.displayName || fName;
 
-  // Preserve any existing profile data (phone, preferences) already known
-  // for this email instead of overwriting it with blanks every Google login.
   const existingAccount = findLocalAccount(user.email);
 
   const userData = {
@@ -75,6 +95,9 @@ const saveGoogleUserLocally = (user) => {
 
   localStorage.setItem("user", JSON.stringify(userData));
   localStorage.setItem("user_profile", JSON.stringify(userData));
+
+  // Restore budget, savings, and settings data scoped to this Google email
+  restoreUserData(userData.email);
 
   try {
     const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
@@ -105,7 +128,6 @@ function Login() {
     password: "",
   });
 
-  // Show a one-time banner if the person just deleted their account in Settings.
   useEffect(() => {
     if (sessionStorage.getItem("bb_show_deleted_msg") === "true") {
       setShowDeletedBanner(true);
@@ -158,7 +180,6 @@ function Login() {
 
       const localAccount = findLocalAccount(userCredential.user.email);
 
-      // Block sign-in for accounts that were deleted from Settings.
       if (localAccount?.deletedAt) {
         await auth.signOut();
         setLoading(false);
@@ -169,16 +190,13 @@ function Login() {
         return;
       }
 
-      // Restore the full profile (name, phone, preferences) for this login,
-      // instead of leaving "user" stale or empty.
       restoreUserSession(userCredential.user, localAccount);
 
-      // Show the loading screen once, right after this successful login.
       sessionStorage.setItem("bb_just_authenticated", "true");
 
       navigate("/dashboard");
     } catch (error) {
-      setLoading(false); // Reset loading state ONLY if an error occurs
+      setLoading(false);
 
       console.log(error);
 
@@ -247,12 +265,11 @@ function Login() {
 
       saveGoogleUserLocally(result.user);
 
-      // Show the loading screen once, right after this successful login.
       sessionStorage.setItem("bb_just_authenticated", "true");
 
       navigate("/dashboard");
     } catch (error) {
-      setLoading(false); // Reset loading state ONLY if popup fails or is closed
+      setLoading(false);
 
       switch (error.code) {
         case "auth/popup-closed-by-user":
