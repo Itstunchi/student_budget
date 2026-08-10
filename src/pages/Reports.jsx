@@ -1,311 +1,359 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Calendar, Filter, ChevronDown, Download,
-  CreditCard, Building2, Smartphone, ArrowUp, ArrowDown, 
-  ShieldCheck, CheckCircle2, Clock, Zap, Settings, RefreshCw
-} from 'lucide-react';
-import { 
-  PieChart as RePieChart, Pie, Cell, ResponsiveContainer 
-} from 'recharts';
 import './Reports.css';
 
-// Helper to load logs saved across the app
-const getStoredActivities = () => {
-  try {
-    const saved = localStorage.getItem('app_activities_log');
-    return saved ? JSON.parse(saved) : [];
-  } catch (e) {
-    return [];
-  }
-};
+export default function Reports() {
+  // Date Filtering State
+  const [filterPreset, setFilterPreset] = useState('month'); // 'week' | 'month' | '30days' | 'year' | 'all' | 'custom'
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
-const getIcon = (category = '') => {
-  const cat = category.toLowerCase();
-  if (cat.includes('utility') || cat.includes('electricity') || cat.includes('bills')) {
-    return <Zap className="rp-act-icon text-amber-500" />;
-  }
-  if (cat.includes('card') || cat.includes('wifi')) {
-    return <CreditCard className="rp-act-icon text-red-500" />;
-  }
-  if (cat.includes('income') || cat.includes('bank')) {
-    return <Building2 className="rp-act-icon text-emerald-500" />;
-  }
-  if (cat.includes('saving')) {
-    return <RefreshCw className="rp-act-icon text-indigo-500" />;
-  }
-  if (cat.includes('mobile') || cat.includes('airtime')) {
-    return <Smartphone className="rp-act-icon text-purple-500" />;
-  }
-  return <Settings className="rp-act-icon text-slate-500" />;
-};
+  // Raw App Data State
+  const [expenses, setExpenses] = useState([]);
+  const [savings, setSavings] = useState([]);
+  const [spendingPlans, setSpendingPlans] = useState([]);
+  const [bills, setBills] = useState([]);
 
-export default function Report() {
-  const [activities, setActivities] = useState(getStoredActivities);
+  // Safe date formatting helper
+  const formatDate = (dateVal) => {
+    if (!dateVal) return 'Today';
+    const d = new Date(dateVal);
+    return isNaN(d.getTime())
+      ? dateVal
+      : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
 
-  // Listen live for any new activity triggered anywhere in the app
+  // Safe date parsing helper (defaults to current date so missing dates don't get filtered out)
+  const parseItemDate = (dateVal) => {
+    if (!dateVal) return new Date();
+    const parsed = new Date(dateVal);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+  };
+
+  // Load Data from LocalStorage
+  const loadAppData = () => {
+    try {
+      const storedExpenses = JSON.parse(localStorage.getItem('user_expenses') || '[]');
+      const storedSavings = JSON.parse(
+        localStorage.getItem('user_savings_plans') || localStorage.getItem('user_savings') || '[]'
+      );
+      const storedSpending = JSON.parse(localStorage.getItem('user_spending_plans') || '[]');
+      const storedBills = JSON.parse(localStorage.getItem('user_bills') || '[]');
+
+      setExpenses(storedExpenses);
+      setSavings(storedSavings);
+      setSpendingPlans(storedSpending);
+      setBills(storedBills);
+    } catch (err) {
+      console.error('Failed to parse financial data from localStorage', err);
+    }
+  };
+
   useEffect(() => {
-    const handleStorageChange = () => {
-      setActivities(getStoredActivities());
-    };
-
-    window.addEventListener('app_activity_logged', handleStorageChange);
-    window.addEventListener('storage', handleStorageChange);
-
+    loadAppData();
+    window.addEventListener('storage', loadAppData);
+    window.addEventListener('appDataChanged', loadAppData);
+    window.addEventListener('user_spending_plans_updated', loadAppData);
     return () => {
-      window.removeEventListener('app_activity_logged', handleStorageChange);
-      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('storage', loadAppData);
+      window.removeEventListener('appDataChanged', loadAppData);
+      window.removeEventListener('user_spending_plans_updated', loadAppData);
     };
   }, []);
 
-  // Handle downloading report as PDF
-  const handleExportStatement = () => {
-    window.print();
-  };
+  // Compute Active Date Range Bounds
+  const activeDateRange = useMemo(() => {
+    const now = new Date();
+    let start = new Date(0);
+    let end = new Date();
 
-  // Calculate totals ONLY from actions actually performed
-  const metrics = useMemo(() => {
-    let inflow = 0;
-    let outflow = 0;
-    let scheduledCount = 0;
+    if (filterPreset === 'week') {
+      const dayOfWeek = now.getDay();
+      start = new Date(now);
+      start.setDate(now.getDate() - dayOfWeek);
+      start.setHours(0, 0, 0, 0);
+    } else if (filterPreset === 'month') {
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else if (filterPreset === '30days') {
+      start = new Date(now);
+      start.setDate(now.getDate() - 30);
+    } else if (filterPreset === 'year') {
+      start = new Date(now.getFullYear(), 0, 1);
+    } else if (filterPreset === 'all') {
+      start = new Date(0);
+      end = new Date(8640000000000000);
+    } else if (filterPreset === 'custom' && startDate && endDate) {
+      start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+    }
 
-    activities.forEach((act) => {
-      const amt = Number(act.rawAmount) || 0;
-      if (amt > 0) inflow += amt;
-      if (amt < 0) outflow += Math.abs(amt);
-      if (act.type?.toLowerCase().includes('scheduled')) scheduledCount += 1;
+    return { start, end };
+  }, [filterPreset, startDate, endDate]);
+
+  // Combine Logged Expenses AND Category-Spent values from Spending Plans
+  const allSpentRecords = useMemo(() => {
+    const records = [];
+
+    // 1. Direct logged expenses
+    expenses.forEach((exp) => {
+      records.push({
+        id: exp.id || Math.random(),
+        category: exp.category || exp.title || 'General Expense',
+        amount: parseFloat(exp.amount) || 0,
+        rawDate: exp.date || exp.createdAt,
+        dateObj: parseItemDate(exp.date || exp.createdAt)
+      });
     });
 
-    return { inflow, outflow, scheduledCount };
-  }, [activities]);
+    // 2. Spent amounts recorded inside Spending Plans
+    spendingPlans.forEach((plan) => {
+      const planRawDate = plan.date || plan.createdAt;
+      const categories = plan.categories || plan.categoryBreakdown || [];
 
-  // Breakdown chart dynamically grouped from user actions
-  const categoryBreakdown = useMemo(() => {
-    const counts = {};
-    let totalOut = 0;
+      categories.forEach((cat) => {
+        const spentVal = parseFloat(cat.spent || 0);
+        if (spentVal > 0) {
+          records.push({
+            id: `sp-${plan.id}-${cat.name || cat.category}`,
+            category: cat.name || cat.category || plan.name || 'Plan Category',
+            amount: spentVal,
+            rawDate: cat.date || planRawDate,
+            dateObj: parseItemDate(cat.date || planRawDate)
+          });
+        }
+      });
 
-    activities.forEach((act) => {
-      const amt = Number(act.rawAmount) || 0;
-      if (amt < 0) {
-        const val = Math.abs(amt);
-        const cat = act.category || 'General';
-        counts[cat] = (counts[cat] || 0) + val;
-        totalOut += val;
+      // Plan-level spent fallback
+      if (categories.length === 0 && parseFloat(plan.totalSpent || plan.spent || 0) > 0) {
+        records.push({
+          id: `sp-total-${plan.id}`,
+          category: plan.name || 'Spending Plan Total',
+          amount: parseFloat(plan.totalSpent || plan.spent || 0),
+          rawDate: planRawDate,
+          dateObj: parseItemDate(planRawDate)
+        });
       }
     });
 
-    const colors = ['#5334ea', '#ec4899', '#10b981', '#0ea5e9', '#94a3b8'];
-    return Object.keys(counts).map((cat, index) => ({
+    return records;
+  }, [expenses, spendingPlans]);
+
+  // Filter Expenses by Active Date Range
+  const filteredExpenses = useMemo(() => {
+    return allSpentRecords.filter((rec) => {
+      return rec.dateObj >= activeDateRange.start && rec.dateObj <= activeDateRange.end;
+    });
+  }, [allSpentRecords, activeDateRange]);
+
+  // Aggregate App Metrics
+  const metrics = useMemo(() => {
+    const totalExpenses = filteredExpenses.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+    const totalSavingsTarget = savings.reduce((sum, item) => sum + (parseFloat(item.targetAmount || item.target || item.amount) || 0), 0);
+    const totalSavingsSaved = savings.reduce((sum, item) => sum + (parseFloat(item.currentAmount || item.saved || 0)), 0);
+
+    // Checks budget, amount, totalBudget, and limit
+    const totalPlannedBudget = spendingPlans.reduce(
+      (sum, item) => sum + (parseFloat(item.budget || item.amount || item.totalBudget || item.limit || 0)),
+      0
+    );
+
+    const totalUnpaidBills = bills
+      .filter((b) => b.status === 'Unpaid' || !b.paid)
+      .reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
+
+    const netSavingsProgress = totalSavingsTarget > 0 
+      ? Math.min(100, Math.round((totalSavingsSaved / totalSavingsTarget) * 100)) 
+      : 0;
+
+    const categoriesMap = {};
+    filteredExpenses.forEach((exp) => {
+      const cat = exp.category || 'General';
+      const amt = parseFloat(exp.amount) || 0;
+      if (!categoriesMap[cat]) {
+        categoriesMap[cat] = { amount: 0, latestDate: exp.rawDate };
+      }
+      categoriesMap[cat].amount += amt;
+    });
+
+    const categoryBreakdown = Object.keys(categoriesMap).map((cat) => ({
       name: cat,
-      value: counts[cat],
-      percentage: totalOut > 0 ? `${Math.round((counts[cat] / totalOut) * 100)}%` : '0%',
-      color: colors[index % colors.length]
-    }));
-  }, [activities]);
+      amount: categoriesMap[cat].amount,
+      latestDate: categoriesMap[cat].latestDate,
+      percentage: totalExpenses > 0 ? Math.round((categoriesMap[cat].amount / totalExpenses) * 100) : 0
+    })).sort((a, b) => b.amount - a.amount);
+
+    return {
+      totalExpenses,
+      totalSavingsTarget,
+      totalSavingsSaved,
+      totalPlannedBudget,
+      totalUnpaidBills,
+      netSavingsProgress,
+      categoryBreakdown
+    };
+  }, [filteredExpenses, savings, spendingPlans, bills]);
 
   return (
-    <div className="rp-container" id="report-print-area">
-      {/* 1. TOP HEADER BANNER (NO NOTIFICATION BUTTON) */}
-      <div className="rp-header">
-        <div className="rp-header-title">
-          <span className="rp-overview-tag">Overview</span>
-          <h2>Financial & Activity Report</h2>
-          <p className="rp-subtitle">Live activity statement tracking actions taken on your app account.</p>
-        </div>
-
-        <div className="rp-header-actions">
-          <button className="rp-btn rp-btn-primary rp-export-btn" onClick={handleExportStatement}>
-            <Download className="w-4 h-4" />
-            Export Statement
-          </button>
+    <div className="reports-container">
+      {/* HEADER SECTION */}
+      <div className="reports-header">
+        <div>
+          <h1 className="reports-title">Financial Analytics & Reports</h1>
+          <p className="reports-subtitle">Comprehensive breakdown across all expenses, budgets, savings, and bills.</p>
         </div>
       </div>
 
-      {/* 2. CONTROLS BAR */}
-      <div className="rp-controls-bar">
-        <div className="rp-section-title">
-          <h3>System Overview</h3>
+      {/* DATE FILTER BAR */}
+      <div className="date-filter-bar">
+        <div className="preset-buttons-group">
+          {[
+            { id: 'week', label: 'This Week' },
+            { id: 'month', label: 'This Month' },
+            { id: '30days', label: 'Last 30 Days' },
+            { id: 'year', label: 'This Year' },
+            { id: 'all', label: 'All Time' },
+            { id: 'custom', label: 'Custom Range' }
+          ].map((preset) => (
+            <button
+              key={preset.id}
+              onClick={() => setFilterPreset(preset.id)}
+              className={`filter-tab-btn ${filterPreset === preset.id ? 'active' : ''}`}
+            >
+              {preset.label}
+            </button>
+          ))}
         </div>
 
-        <div className="rp-filters-group">
-          <div className="rp-filter-pill">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <span>Jul 1 – Jul 31, 2026</span>
-            <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-          </div>
-          <button className="rp-btn rp-btn-outline rp-filter-btn">
-            <Filter className="w-3.5 h-3.5 text-slate-400" />
-            Filter
-          </button>
-        </div>
-      </div>
-
-      {/* 3. METRICS CARDS */}
-      <div className="rp-metrics-grid">
-        <div className="rp-card rp-metric-card">
-          <span className="rp-metric-label">Total Inflow Recorded</span>
-          <h3 className="rp-metric-value">
-            {metrics.inflow > 0 ? `₦${metrics.inflow.toLocaleString()}` : '₦0'}
-          </h3>
-          <div className="rp-metric-change pos">
-            <ArrowUp className="w-3 h-3" />
-            <span>From performed actions</span>
-          </div>
-        </div>
-
-        <div className="rp-card rp-metric-card">
-          <span className="rp-metric-label">Total Outflow Recorded</span>
-          <h3 className="rp-metric-value">
-            {metrics.outflow > 0 ? `₦${metrics.outflow.toLocaleString()}` : '₦0'}
-          </h3>
-          <div className="rp-metric-change neg">
-            <ArrowDown className="w-3 h-3" />
-            <span>From performed actions</span>
-          </div>
-        </div>
-
-        <div className="rp-card rp-metric-card">
-          <span className="rp-metric-label">App Actions Recorded</span>
-          <h3 className="rp-metric-value">{activities.length} Events</h3>
-          <div className="rp-metric-change pos">
-            <span>Actions in log</span>
-          </div>
-        </div>
-
-        <div className="rp-card rp-metric-card">
-          <span className="rp-metric-label">Scheduled Bills</span>
-          <h3 className="rp-metric-value">{metrics.scheduledCount} Active</h3>
-          <div className="rp-metric-change pos">
-            <span>Set up in app</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. CHARTS SECTION */}
-      <div className="rp-charts-grid">
-        <div className="rp-card rp-donut-card">
-          <div className="rp-card-header">
-            <h3>Outflow Distribution</h3>
-          </div>
-          
-          {categoryBreakdown.length > 0 ? (
-            <>
-              <div className="rp-donut-wrapper">
-                <div className="rp-donut-chart">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RePieChart>
-                      <Pie data={categoryBreakdown} innerRadius={55} outerRadius={75} paddingAngle={4} dataKey="value">
-                        {categoryBreakdown.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                    </RePieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="rp-donut-center">
-                  <p className="rp-donut-total">₦{metrics.outflow.toLocaleString()}</p>
-                  <p className="rp-donut-sub">Total Spent</p>
-                </div>
-              </div>
-
-              <div className="rp-breakdown-list">
-                {categoryBreakdown.map((item) => (
-                  <div key={item.name} className="rp-breakdown-item">
-                    <div className="rp-breakdown-label">
-                      <span className="rp-dot" style={{ backgroundColor: item.color }} />
-                      <span>{item.name}</span>
-                    </div>
-                    <div className="rp-breakdown-values">
-                      <span className="rp-pct">{item.percentage}</span>
-                      <span className="rp-amt">₦{item.value.toLocaleString()}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="rp-empty-state">No money outgoing actions logged yet.</div>
-          )}
-        </div>
-      </div>
-
-      {/* 5. ACTIVITY TABLE */}
-      <div className="rp-bottom-grid">
-        <div className="rp-card rp-table-card">
-          <div className="rp-card-header">
-            <div>
-              <h3>Logged App Activity & History</h3>
-              <p className="rp-card-sub">Itemized audit of everything performed on the app</p>
+        {filterPreset === 'custom' && (
+          <div className="custom-date-inputs">
+            <div className="date-field">
+              <label>From</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="date-field">
+              <label>To</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
             </div>
           </div>
+        )}
+      </div>
 
-          <div className="rp-table-responsive">
-            {activities.length > 0 ? (
-              <table className="rp-table">
-                <thead>
-                  <tr>
-                    <th>Event / Action</th>
-                    <th>Category</th>
-                    <th>Type</th>
-                    <th>Date & Time</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activities.map((act) => (
-                    <tr key={act.id}>
-                      <td>
-                        <div className="rp-act-title-cell">
-                          {getIcon(act.category)}
-                          <span className="rp-act-title">{act.title}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="rp-category-badge">{act.category}</span>
-                      </td>
-                      <td className="rp-act-type">{act.type}</td>
-                      <td className="rp-act-time">
-                        <div className="flex items-center gap-1 text-slate-500">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          <span>{act.timestamp}</span>
-                        </div>
-                      </td>
-                      <td className="rp-act-amount">{act.amount || '—'}</td>
-                      <td>
-                        <span className={`rp-status-badge ${act.status ? act.status.toLowerCase() : 'completed'}`}>
-                          <CheckCircle2 className="w-3 h-3" />
-                          {act.status || 'Completed'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="rp-empty-state">No app activities logged yet. Perform an action anywhere on the app to record it here.</div>
-            )}
+      {/* METRIC OVERVIEW CARDS */}
+      <div className="metrics-grid">
+        <div className="metric-card">
+          <div className="metric-header">
+            <span className="metric-label">Total Spent</span>
+            <span className="metric-icon red-bg">💸</span>
           </div>
+          <h2 className="metric-value">₦{metrics.totalExpenses.toLocaleString()}</h2>
+          <p className="metric-footer">{filteredExpenses.length} transactions in this period</p>
         </div>
 
-        {/* SIDE TIMESTAMPS */}
-        <div className="rp-card rp-summary-card">
-          <div className="rp-card-header">
-            <h3>Recent Action Timestamps</h3>
+        <div className="metric-card">
+          <div className="metric-header">
+            <span className="metric-label">Planned Spending</span>
+            <span className="metric-icon purple-bg">📊</span>
           </div>
+          <h2 className="metric-value">₦{metrics.totalPlannedBudget.toLocaleString()}</h2>
+          <p className="metric-footer">{spendingPlans.length} active spending plans set</p>
+        </div>
 
-          <div className="rp-summary-list">
-            {activities.slice(0, 6).map((act) => (
-              <div key={act.id} className="rp-summary-item">
-                <span className="rp-summary-label">{act.title}</span>
-                <span className="rp-summary-val">{act.timestamp}</span>
-              </div>
-            ))}
+        <div className="metric-card">
+          <div className="metric-header">
+            <span className="metric-label">Savings Target</span>
+            <span className="metric-icon green-bg">🎯</span>
           </div>
+          <h2 className="metric-value">₦{metrics.totalSavingsTarget.toLocaleString()}</h2>
+          <p className="metric-footer">
+            ₦{metrics.totalSavingsSaved.toLocaleString()} accumulated ({metrics.netSavingsProgress}%)
+          </p>
+        </div>
 
-          <div className="rp-report-footer-info">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-            <span>Live Local Logging Active</span>
+        <div className="metric-card">
+          <div className="metric-header">
+            <span className="metric-label">Pending Bills</span>
+            <span className="metric-icon orange-bg">🔔</span>
           </div>
+          <h2 className="metric-value">₦{metrics.totalUnpaidBills.toLocaleString()}</h2>
+          <p className="metric-footer">
+            {bills.filter(b => b.status === 'Unpaid' || !b.paid).length} active bill reminders
+          </p>
+        </div>
+      </div>
+
+      {/* DETAILED ANALYSIS SECTION */}
+      <div className="analytics-details-grid">
+        <div className="report-panel">
+          <h3 className="panel-title">Expense Breakdown by Category</h3>
+          {metrics.categoryBreakdown.length === 0 ? (
+            <p className="empty-panel-text">No recorded expenses found for this time period.</p>
+          ) : (
+            <div className="category-list">
+              {metrics.categoryBreakdown.map((cat, idx) => (
+                <div key={idx} className="category-item">
+                  <div className="category-header">
+                    <div>
+                      <span className="category-name">{cat.name}</span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '8px', fontWeight: 'normal' }}>
+                        📅 {formatDate(cat.latestDate)}
+                      </span>
+                    </div>
+                    <span className="category-val">₦{cat.amount.toLocaleString()} ({cat.percentage}%)</span>
+                  </div>
+                  <div className="progress-track">
+                    <div 
+                      className="progress-fill" 
+                      style={{ width: `${cat.percentage}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="report-panel">
+          <h3 className="panel-title">Active Savings Progress</h3>
+          {savings.length === 0 ? (
+            <p className="empty-panel-text">No active savings plans found in the app.</p>
+          ) : (
+            <div className="savings-list">
+              {savings.map((plan) => {
+                const target = parseFloat(plan.targetAmount || plan.target || plan.amount) || 0;
+                const saved = parseFloat(plan.currentAmount || plan.saved || 0);
+                const pct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0;
+
+                return (
+                  <div key={plan.id || plan.title} className="savings-item">
+                    <div className="savings-info">
+                      <div>
+                        <span className="savings-name">{plan.title || 'Savings Goal'}</span>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', marginLeft: '8px', fontWeight: 'normal' }}>
+                          📅 {formatDate(plan.date || plan.createdAt)}
+                        </span>
+                      </div>
+                      <span className="savings-numbers">
+                        ₦{saved.toLocaleString()} / ₦{target.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="progress-track green-track">
+                      <div className="progress-fill green-fill" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

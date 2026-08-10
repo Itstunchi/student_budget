@@ -78,7 +78,7 @@ function Signup() {
         localStorage.setItem("accounts", JSON.stringify(updatedAccounts));
       } else {
         const updatedAccounts = existingAccounts.map((acc) =>
-          acc.email === userData.email ? { ...acc, ...userData } : acc
+          acc.email === userData.email ? { ...acc, ...userData, deletedAt: undefined } : acc
         );
         localStorage.setItem("accounts", JSON.stringify(updatedAccounts));
       }
@@ -135,6 +135,9 @@ function Signup() {
       // Save user details with preferences to localStorage & sync sidebar
       saveUserLocally(userCredential.user);
 
+      // Show the loading screen once, right after this successful signup.
+      sessionStorage.setItem("bb_just_authenticated", "true");
+
       // Navigate to dashboard
       navigate("/dashboard");
     } catch (error) {
@@ -166,6 +169,9 @@ function Signup() {
       const googleLastName = nameParts.slice(1).join(" ") || "";
 
       saveUserLocally(result.user, googleFirstName, googleLastName);
+
+      // Show the loading screen once, right after this successful signup.
+      sessionStorage.setItem("bb_just_authenticated", "true");
 
       navigate("/dashboard");
     } catch (error) {

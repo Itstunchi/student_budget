@@ -470,3 +470,46 @@ body {
 .sidebar.collapsed .sidebar-header {
   justify-content: center;
 }
+
+/* ─── Account Switcher Glass Overlay ─── */
+.account-switch-loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: overlayFadeIn 0.2s ease-out;
+}
+
+.account-switch-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  padding: 14px 28px;
+  border-radius: 9999px;
+  box-shadow: 0 10px 25px -5px rgba(108, 76, 224, 0.2);
+  border: 1px solid rgba(108, 76, 224, 0.15);
+  color: #1f2937;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.account-switch-spinner {
+  color: var(--primary-color, #6c4ce0);
+  animation: accountSwitchSpin 0.8s linear infinite;
+}
+
+@keyframes accountSwitchSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

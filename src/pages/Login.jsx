@@ -1,5 +1,5 @@
 import "../styles/Login.css";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import logo from "../assets/logo.png";
 import robot from "../assets/robot.png";
 import { Link, useNavigate } from "react-router-dom";
@@ -8,13 +8,91 @@ import {
   FiLock,
   FiEye,
   FiEyeOff,
+  FiCheckCircle,
 } from "react-icons/fi";
 import { auth, googleProvider } from "../firebase/firebase";
 import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 
+// ─── Look up this email's full locally-known profile (name, phone, etc.)
+//     from the "accounts" list this browser has previously saved, and
+//     report whether it was marked deleted in Settings. ───
+const findLocalAccount = (email) => {
+  try {
+    const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+    return accounts.find((acc) => acc.email === email) || null;
+  } catch {
+    return null;
+  }
+};
+
+// ─── Restore the full profile (phone, name, currency, etc.) into the
+//     active "user"/"user_profile" keys instead of leaving them stale or
+//     empty after a plain email/password sign-in. ───
+const restoreUserSession = (firebaseUser, localAccount) => {
+  const restored = localAccount || {
+    id: firebaseUser.uid || firebaseUser.email || "user_default",
+    fullName: firebaseUser.displayName || "User",
+    name: firebaseUser.displayName || "User",
+    email: firebaseUser.email,
+    phone: "",
+    currency: "NGN (₦)",
+    language: "English",
+    photo: firebaseUser.photoURL || "",
+  };
+
+  localStorage.setItem("user", JSON.stringify(restored));
+  localStorage.setItem("user_profile", JSON.stringify(restored));
+  window.dispatchEvent(new Event("storage"));
+  return restored;
+};
+
+const saveGoogleUserLocally = (user) => {
+  const nameParts = (user.displayName || "").split(" ");
+  const fName = nameParts[0] || "User";
+  const lName = nameParts.slice(1).join(" ") || "";
+  const combinedFullName = user.displayName || fName;
+
+  // Preserve any existing profile data (phone, preferences) already known
+  // for this email instead of overwriting it with blanks every Google login.
+  const existingAccount = findLocalAccount(user.email);
+
+  const userData = {
+    ...existingAccount,
+    id: existingAccount?.id || user.uid || user.email,
+    firstName: existingAccount?.firstName || fName,
+    lastName: existingAccount?.lastName || lName,
+    fullName: combinedFullName,
+    name: combinedFullName,
+    preferredName: existingAccount?.preferredName || "first",
+    displayName: fName,
+    email: user.email,
+    phone: existingAccount?.phone || "",
+    currency: existingAccount?.currency || "NGN (₦)",
+    language: existingAccount?.language || "English",
+    photo: user.photoURL || existingAccount?.photo || "",
+    deletedAt: undefined,
+  };
+
+  localStorage.setItem("user", JSON.stringify(userData));
+  localStorage.setItem("user_profile", JSON.stringify(userData));
+
+  try {
+    const accounts = JSON.parse(localStorage.getItem("accounts") || "[]");
+    const updatedAccounts = existingAccount
+      ? accounts.map((acc) => (acc.email === user.email ? { ...acc, ...userData } : acc))
+      : [...accounts, userData];
+    localStorage.setItem("accounts", JSON.stringify(updatedAccounts));
+  } catch (e) {
+    console.error("Error updating local accounts list:", e);
+  }
+
+  window.dispatchEvent(new Event("storage"));
+};
+
 function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showDeletedBanner, setShowDeletedBanner] = useState(false);
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -26,6 +104,14 @@ function Login() {
     email: "",
     password: "",
   });
+
+  // Show a one-time banner if the person just deleted their account in Settings.
+  useEffect(() => {
+    if (sessionStorage.getItem("bb_show_deleted_msg") === "true") {
+      setShowDeletedBanner(true);
+      sessionStorage.removeItem("bb_show_deleted_msg");
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -39,30 +125,6 @@ function Login() {
       ...prev,
       [name]: "",
     }));
-  };
-
-  const saveGoogleUserLocally = (user) => {
-    const nameParts = (user.displayName || "").split(" ");
-    const fName = nameParts[0] || "User";
-    const lName = nameParts.slice(1).join(" ") || "";
-    const combinedFullName = user.displayName || fName;
-
-    const userData = {
-      firstName: fName,
-      lastName: lName,
-      fullName: combinedFullName,
-      preferredName: "first",
-      displayName: fName,
-      email: user.email,
-      phone: "",
-      currency: "NGN (₦)",
-      language: "English",
-      photo: user.photoURL || "",
-    };
-
-    localStorage.setItem("user", JSON.stringify(userData));
-    localStorage.setItem("user_profile", JSON.stringify(userData));
-    window.dispatchEvent(new Event("storage"));
   };
 
   const handleLogin = async (e) => {
@@ -94,9 +156,26 @@ function Login() {
         formData.password
       );
 
-      console.log("Logged in user:", userCredential.user);
+      const localAccount = findLocalAccount(userCredential.user.email);
 
-      // Keep loading active while taking user to Dashboard
+      // Block sign-in for accounts that were deleted from Settings.
+      if (localAccount?.deletedAt) {
+        await auth.signOut();
+        setLoading(false);
+        setErrors({
+          email: "This account was deleted. Please sign up again to create a new account.",
+          password: "",
+        });
+        return;
+      }
+
+      // Restore the full profile (name, phone, preferences) for this login,
+      // instead of leaving "user" stale or empty.
+      restoreUserSession(userCredential.user, localAccount);
+
+      // Show the loading screen once, right after this successful login.
+      sessionStorage.setItem("bb_just_authenticated", "true");
+
       navigate("/dashboard");
     } catch (error) {
       setLoading(false); // Reset loading state ONLY if an error occurs
@@ -154,10 +233,23 @@ function Login() {
 
       const result = await signInWithPopup(auth, googleProvider);
 
-      console.log("Google User:", result.user);
+      const localAccount = findLocalAccount(result.user.email);
+
+      if (localAccount?.deletedAt) {
+        await auth.signOut();
+        setLoading(false);
+        setErrors((prev) => ({
+          ...prev,
+          email: "This account was deleted. Please sign up again to create a new account.",
+        }));
+        return;
+      }
+
       saveGoogleUserLocally(result.user);
 
-      // Keep loading active while taking user to Dashboard
+      // Show the loading screen once, right after this successful login.
+      sessionStorage.setItem("bb_just_authenticated", "true");
+
       navigate("/dashboard");
     } catch (error) {
       setLoading(false); // Reset loading state ONLY if popup fails or is closed
@@ -226,6 +318,27 @@ function Login() {
         <h1>Sign in to your account</h1>
 
         <p>Enter your details to access your account</p>
+
+        {showDeletedBanner && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              background: "#ecfdf5",
+              border: "1px solid #10b981",
+              color: "#065f46",
+              borderRadius: "12px",
+              padding: "12px 16px",
+              marginBottom: "18px",
+              fontSize: "14px",
+              fontWeight: 500,
+            }}
+          >
+            <FiCheckCircle size={18} style={{ flexShrink: 0 }} />
+            <span>Your account was successfully deleted.</span>
+          </div>
+        )}
 
         <form onSubmit={handleLogin}>
           <label>Email address</label>

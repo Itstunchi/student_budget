@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ActivityProvider } from "./pages/ActivityContext"; 
+import { Loader2 } from "lucide-react";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -13,7 +14,8 @@ import Settings from "./settings/pages/settings";
 import Dashboard from "./pages/Dashboard";
 import LoadingScreen from "./components/LoadingScreen/LoadingScreen";
 import Layout from "./components/Layout";
-import Report from "./pages/Reports";
+import Reports from "./pages/Reports";
+// import Report from "./pages/Reports";
 
 const hexToRgb = (hex) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -61,7 +63,8 @@ function App() {
           <Route path="/spending-plan" element={<SpendingPlanWizard />} />
           <Route path="/savings-plan" element={<SavingsPlan />} />
           <Route path="/bills" element={<Bills />} />
-          <Route path="/reports" element={<Report />} />
+          {/* <Route path="/reports" element={<Report />} /> */}
+           <Route path="/reports" element={<Reports />} />
         </Route>
       </Routes>
     </ActivityProvider>
