@@ -1,10 +1,12 @@
 import "../styles/Login.css";
-import { useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-
+import logo from "../assets/logo.png";
+import robot from "../assets/robot.png";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../firebase/firebase";
-import { FiTarget, FiCalendar, FiShield, FiBell, FiTrendingUp, FiMail, FiLock, FiEye, FiEyeOff } from "../components/Icons";
+import { FiMail } from "../components/Icons";
+
 function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,6 +29,7 @@ function ForgotPassword() {
     setLoading(true);
 
     try {
+      // Firebase handles sending the reset link email automatically
       await sendPasswordResetEmail(auth, cleanedEmail);
 
       setSuccess("Password reset link has been sent to your email.");
@@ -58,13 +61,38 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="login-page">
-      <div className="right-side">
-        <h1>Forgot Password</h1>
+    <div
+      className="login-page"
+      style={{
+        maxHeight: "100vh",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        display: "flex",
+        alignItems: "flex-start",
+        paddingTop: "40px",
+        paddingBottom: "60px",
+      }}
+    >
+      <div className="left-side">
+        <div className="logo">
+          <img src={logo} alt="BudgetBuddy Logo" width="250" />
+        </div>
 
-        <p>
-          Enter your email address and we'll send you a password reset link.
-        </p>
+        <img src={robot} alt="Robot" className="robot" width="200" />
+
+        <h2>Reset Your Password 🔒</h2>
+        <p>Don't worry, we'll help you get back into your account in no time.</p>
+      </div>
+
+      <div
+        className="right-side"
+        style={{
+          maxHeight: "none",
+          height: "auto",
+        }}
+      >
+        <h1>Forgot Password</h1>
+        <p>Enter your email address and we'll send you a password reset link.</p>
 
         <form onSubmit={handleReset}>
           <label htmlFor="email">Email Address</label>
@@ -77,6 +105,7 @@ function ForgotPassword() {
               type="email"
               placeholder="Enter your email"
               value={email}
+              disabled={loading}
               onChange={(e) => {
                 setEmail(e.target.value);
                 setError("");
@@ -86,20 +115,19 @@ function ForgotPassword() {
           </div>
 
           {error && <p className="error-message">{error}</p>}
-          {success && <p className="success-message">{success}</p>}
+          {success && (
+            <p className="success-message" style={{ color: "#2e7d32", fontSize: "14px", marginTop: "8px" }}>
+              {success}
+            </p>
+          )}
 
-          <button
-            className="login-btn"
-            type="submit"
-            disabled={loading}
-          >
+          <button className="login-btn" type="submit" disabled={loading}>
             {loading ? "Sending..." : "Send Reset Link"}
           </button>
         </form>
 
         <p className="signup">
-          Remember your password?
-          <Link to="/"> Sign In</Link>
+          Remember your password? <Link to="/">Sign In</Link>
         </p>
       </div>
     </div>

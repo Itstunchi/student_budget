@@ -1,0 +1,346 @@
+/* ============================================
+   1. MAIN CONTAINER
+   ============================================ */
+
+.bills-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 100%;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #1e293b;
+  box-sizing: border-box;
+  min-width: 0; /* Prevents flex children from overflowing */
+  overflow-x: hidden; /* Hard clip for any rogue internal child */
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Prevents images, tables, SVG, and code blocks from forcing parent width */
+.bills-page-container img,
+.bills-page-container svg,
+.bills-page-container table,
+.bills-page-container canvas {
+  max-width: 100% !important;
+  height: auto;
+}
+
+/* ============================================
+   2. HEADER & BANNER CARDS
+   ============================================ */
+
+.bills-header-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border: 1px solid #f1f5f9;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.bills-header-card h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  word-break: break-word;
+}
+
+.bills-header-card p {
+  margin: 0.25rem 0 0 0;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.bills-primary-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: #4f46e5;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.bills-primary-btn:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+/* AI Banner */
+.bills-ai-banner {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  color: #ffffff;
+  padding: 1.25rem 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.bills-ai-avatar {
+  font-size: 1.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bills-ai-banner h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.bills-ai-banner p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.875rem;
+  opacity: 0.95;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* ============================================
+   3. GRID & WORKSPACE LAYOUT
+   ============================================ */
+
+.bills-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (min-width: 1024px) {
+  .bills-grid-layout {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+.bills-left-col, 
+.bills-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0; /* Critical: stops long text or tables from breaking grid */
+  width: 100%;
+}
+
+/* Summary Grid Cards - Fixed minmax to 100% on small screens */
+.bills-summary-grid,
+.stats-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: 1rem;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Individual Bill Cards & Reminders */
+.bill-card, 
+.reminder-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  gap: 1rem;
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+}
+
+.bill-card .bill-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Safe Table Styling in case tables are rendered inside Bills */
+.bills-page-container table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.bills-page-container td,
+.bills-page-container th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================
+   4. FLOATING AI BUTTON
+   ============================================ */
+
+.floating-ai-btn {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  color: #ffffff;
+  border: none;
+  padding: 0.85rem 1.25rem;
+  border-radius: 50px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.35);
+  transition: all 0.3s ease;
+  animation: floatBounce 3s ease-in-out infinite;
+}
+
+.floating-ai-btn:hover {
+  transform: translateY(-4px) scale(1.03);
+  box-shadow: 0 12px 25px rgba(124, 58, 237, 0.5);
+}
+
+@keyframes floatBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* ============================================
+   5. RESPONSIVE BREAKPOINTS
+   ============================================ */
+
+/* Tablet Optimization */
+@media screen and (max-width: 1024px) {
+  .bills-page-container {
+    padding: 1.25rem;
+  }
+}
+
+/* Mobile Devices Optimization */
+@media screen and (max-width: 768px) {
+  .bills-page-container {
+    padding: 0.875rem;
+    gap: 1rem;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Stack header content vertically on mobile */
+  .bills-header-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1.25rem;
+    gap: 1rem;
+  }
+
+  .bills-primary-btn {
+    width: 100%;
+    padding: 0.875rem;
+    justify-content: center;
+    white-space: normal;
+  }
+
+  /* AI Banner responsive adjustments */
+  .bills-ai-banner {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 1rem;
+    gap: 0.875rem;
+  }
+
+  /* Force top summary cards into a clean 1-column stack */
+  .bills-summary-grid,
+  .stats-header {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem;
+  }
+
+  /* Bill Item Card adjustments for touch screens */
+  .bill-card, 
+  .reminder-item {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    padding: 1rem;
+  }
+
+  .bill-card .bill-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .bill-card .bill-actions button {
+    flex: 1;
+    padding: 0.75rem;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* Reposition floating AI button so it doesn't block content */
+  .floating-ai-btn {
+    bottom: 1.25rem;
+    right: 1.25rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
+/* Ultra Small Screens (e.g. iPhone SE) */
+@media screen and (max-width: 480px) {
+  .floating-ai-btn span {
+    display: none; /* Hides text, leaves icon intact for tight mobile displays */
+  }
+
+  .floating-ai-btn {
+    padding: 0.875rem;
+    border-radius: 50%;
+  }
+}
+/* Mobile by default: hide sidebar */
+.sidebar {
+  display: none;
+}
+
+/* Desktop screen breakpoint */
+@media (min-width: 768px) {
+  .sidebar {
+    display: flex; /* or block */
+  }
+}

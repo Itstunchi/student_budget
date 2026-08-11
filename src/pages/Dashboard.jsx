@@ -1,457 +1,588 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
 import {
   Wallet,
-  Home,
-  ClipboardList,
   PiggyBank,
-  TrendingUp,
   Calendar,
-  CalendarDays,
   BarChart3,
   FileText,
-  MessageCircle,
   Bell,
   Bot,
-  Wifi,
-  Droplet,
-  GraduationCap,
   ArrowUpRight,
-  MoreVertical,
-  Coffee,
-  Car,
-  Smartphone,
+  Sparkles,
+  Edit2,
+  X
 } from "lucide-react";
 import "./Dashboard.css";
-import Sidebar from "../components/Sidebar";
-import { useEffect } from "react";
-import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
-import useBudget from "../hooks/useBudget";
-import useTransactions from "../hooks/useTransactions";
-import useBills from "../hooks/useBills";
-import { auth } from "../firebase/firebase";
-import { useNavigate } from "react-router-dom";
-import AddBillModal from "../components/AddBillModal";
-import AddTransactionModal from "../components/AddTransactionModal";
 
-
-const navItems = [
-  { icon: Home, label: "Dashboard", active: true },
-  { icon: ClipboardList, label: "Spending Plan" },
-  { icon: PiggyBank, label: "Savings Plan" },
-  { icon: TrendingUp, label: "Invest Plan" },
-  { icon: Calendar, label: "Bills & Reminders" },
-  { icon: CalendarDays, label: "Calendar" },
-  { icon: BarChart3, label: "Insights" },
-  { icon: FileText, label: "Reports" },
-  { icon: MessageCircle, label: "Ask Advisor" },
-];
-
-function DonutChart({ data, total }) {
+// ANIMATED DONUT CHART COMPONENT
+function DonutChart({ spent, total }) {
   const radius = 60;
   const circumference = 2 * Math.PI * radius;
-  let offsetAccum = 0;
+  const percent = total > 0 ? Math.min((spent / total) * 100, 100) : 0;
+  const strokeDashoffset = circumference - (percent / 100) * circumference;
 
   return (
     <svg width="160" height="160" viewBox="0 0 160 160">
-      {data.map((slice, i) => {
-        const dash = (slice.percent / 100) * circumference;
-        const gap = circumference - dash;
-        const rotation = (offsetAccum / 100) * 360 - 90;
-        offsetAccum += slice.percent;
-        return (
-          <circle
-            key={i}
-            cx="80"
-            cy="80"
-            r={radius}
-            fill="none"
-            stroke={slice.color}
-            strokeWidth="22"
-            strokeDasharray={`${dash} ${gap}`}
-            transform={`rotate(${rotation} 80 80)`}
-          />
-        );
-      })}
-      <text x="80" y="75" textAnchor="middle" className="donut-amount">
-        ₦{total.toLocaleString()}
+      <circle
+        cx="80"
+        cy="80"
+        r={radius}
+        fill="none"
+        stroke="#E5E7EB"
+        strokeWidth="18"
+      />
+      {total > 0 && (
+        <circle
+          cx="80"
+          cy="80"
+          r={radius}
+          fill="none"
+          stroke="#6C4CE0"
+          strokeWidth="18"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          transform="rotate(-90 80 80)"
+          style={{
+            transition: "stroke-dashoffset 1.2s ease-in-out, stroke 0.5s ease",
+          }}
+        />
+      )}
+      <text x="80" y="75" textAnchor="middle" className="donut-amount" style={{ fontWeight: "bold", fontSize: "18px" }}>
+        ₦{(spent || 0).toLocaleString()}
       </text>
-      <text x="80" y="95" textAnchor="middle" className="donut-label">
+      <text x="80" y="95" textAnchor="middle" className="donut-label" style={{ fill: "#6B7280", fontSize: "12px" }}>
         Spent
       </text>
     </svg>
   );
 }
 
-function Dashboard() {
-  const [active, setActive] = useState("Dashboard");
-  const { budget, loading: budgetLoading } = useBudget();
+// ─── Canonical storage keys ───
+// These MUST match exactly what SpendingPlanWizard.jsx and SavingsPlan.jsx write to.
+const BUDGET_KEY = "user_budget";
+const SAVINGS_KEY = "user_savings_plans";
 
-  const [userName, setUserName] = useState("Student");
-  const [greeting, setGreeting] = useState("");
+export default function Dashboard() {
   const navigate = useNavigate();
-  const [showBillModal, setShowBillModal] = useState(false);
-  const [showTransactionModal, setShowTransactionModal] = useState(false);
-
-      const {
-        bills,
-        loading: billsLoading,
-        loadBills,
-      } = useBills();
-
-      const {
-        transactions,
-        loading: transactionLoading,
-        loadTransactions,
-      } = useTransactions();
-
-  const totalBudget = budget?.amount || 0;
-
-const allocations = budget?.allocations || [];
-
-const needs =
-  allocations.find(item => item.category === "Needs")?.amount || 0;
-
-const wants =
-  allocations.find(item => item.category === "Wants")?.amount || 0;
-
-const savings =
-  allocations.find(item => item.category === "Savings")?.amount || 0;
-
-const investments =
-  allocations.find(item => item.category === "Investments")?.amount || 0;
-
-const available =
-  totalBudget - (needs + wants + savings + investments);
-
-// Total amount the user has actually spent
-const spent = transactions.reduce(
-  (total, transaction) => total + Number(transaction.amount || 0),
-  0
-);
-
-// Remaining money after actual spending
-const remainingBalance = totalBudget - spent;
-
-// Budget usage percentage
-const budgetUsed =
-  totalBudget > 0 ? Math.round((spent / totalBudget) * 100) : 0;
-
   const [loading, setLoading] = useState(true);
+  const [showAiInput, setShowAiInput] = useState(false);
+  const [query, setQuery] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
 
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        setLoading(false);
-      }, 3000);
+  // LOGGED IN USER STATE
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("user");
+      return saved ? JSON.parse(saved) : { fullName: "User" };
+    } catch {
+      return { fullName: "User" };
+    }
+  });
 
-      return () => clearTimeout(timer);
-    }, []);
+  // NOTIFICATION MODAL STATE
+  const [showNotifModal, setShowNotifModal] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, type: "bill", title: "Electricity Bill Due", desc: "₦15,000 due in 2 days", date: "Jul 31" },
+    { id: 2, type: "alert", title: "Budget Warning", desc: "You have spent 85% of your Dining budget", date: "Today" },
+    { id: 3, type: "report", title: "Monthly Summary Ready", desc: "Your financial report for July is generated", date: "Yesterday" },
+  ]);
 
-    useEffect(() => {
-      const user = auth.currentUser;
+  const [budgetData, setBudgetData] = useState({
+    totalBudget: 0,
+    planned: 0,
+    savings: 0,
+    available: 0,
+    spent: 0,
+    categories: []
+  });
 
-      if (user) {
-        if (user.displayName) {
-          setUserName(user.displayName);
-        } else if (user.email) {
-          const name = user.email.split("@")[0];
-          setUserName(
-            name.charAt(0).toUpperCase() + name.slice(1)
-          );
-        }
+  const [savingsGoals, setSavingsGoals] = useState([]);
+  const [editingGoalId, setEditingGoalId] = useState(null);
+  const [editGoalTitle, setEditGoalTitle] = useState("");
+  const [editGoalSaved, setEditGoalSaved] = useState("");
+  const [editGoalTarget, setEditGoalTarget] = useState("");
+
+  const calculateTotalSpent = (categories = []) => {
+    return categories.reduce((sum, cat) => sum + (Number(cat.spent) || 0), 0);
+  };
+
+  const loadDashboardData = () => {
+    try {
+      const savedUser = localStorage.getItem("user");
+      if (savedUser) {
+        setUser(JSON.parse(savedUser));
       }
-
-      const hour = new Date().getHours();
-
-      if (hour < 12) {
-        setGreeting("Good Morning ☀️");
-      } else if (hour < 17) {
-        setGreeting("Good Afternoon 🌤️");
-      } else {
-        setGreeting("Good Evening 🌙");
-      }
-    }, []);
-
-    if (
-      loading ||
-      budgetLoading ||
-      transactionLoading ||
-      billsLoading
-    ) {
-      return <LoadingScreen />;
+    } catch (e) {
+      console.error("Error loading user profile", e);
     }
 
-    const budgetData =
-      budget?.allocations?.map((item) => ({
-        label: item.category,
-        percent: item.percentage,
-        amount: item.amount,
-        color: item.color,
-      })) || [];
-      // console.log("Budget from Firestore:", budget);
+    // 1. Load the active spending plan.
+    // SpendingPlanWizard.jsx always writes the active plan to BUDGET_KEY ("user_budget"),
+    // so that's the source of truth. "spending_plan" is kept as a legacy fallback only.
+    const savedBudgetRaw =
+      localStorage.getItem(BUDGET_KEY) || localStorage.getItem("spending_plan");
 
-    return (
-      <div className="dashboard">
-        <Sidebar />
+    if (savedBudgetRaw) {
+      try {
+        const parsed = JSON.parse(savedBudgetRaw);
 
-      {/* Main content */}
+        // Normalize schema names
+        const rawCategories = parsed.categories || parsed.items || [];
+        const normalizedCategories = rawCategories.map(cat => ({
+          name: cat.name || cat.title || "Uncategorized",
+          amount: Number(cat.amount || cat.allocated || cat.budget || 0),
+          spent: Number(cat.spent || 0)
+        }));
+
+        const totalBudgetVal = Number(parsed.totalBudget || parsed.income || parsed.totalIncome || 0);
+        const plannedVal = Number(parsed.planned || parsed.totalAllocated || parsed.allocated || 0);
+        const computedSpent = calculateTotalSpent(normalizedCategories);
+
+        setBudgetData({
+          totalBudget: totalBudgetVal,
+          planned: plannedVal,
+          savings: Number(parsed.savings || 0),
+          available: Number(parsed.available ?? (totalBudgetVal - plannedVal) ?? 0),
+          spent: computedSpent,
+          categories: normalizedCategories
+        });
+      } catch (e) {
+        console.error("Error reading saved budget", e);
+      }
+    } else {
+      setBudgetData({
+        totalBudget: 0,
+        planned: 0,
+        savings: 0,
+        available: 0,
+        spent: 0,
+        categories: []
+      });
+    }
+
+    // 2. Load Savings Goals.
+    // SavingsPlan.jsx always writes the full goals list to SAVINGS_KEY ("user_savings_plans").
+    const savedGoals = localStorage.getItem(SAVINGS_KEY);
+    if (savedGoals) {
+      try {
+        const parsed = JSON.parse(savedGoals);
+        const normalized = parsed.map(g => ({
+          ...g,
+          currentAmount: g.currentAmount !== undefined ? g.currentAmount : (g.saved || 0),
+          targetAmount: g.targetAmount !== undefined ? g.targetAmount : (g.target || 0),
+        }));
+        setSavingsGoals(normalized);
+      } catch (e) {
+        console.error("Error loading savings goals:", e);
+      }
+    } else {
+      setSavingsGoals([]);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData();
+
+    const handleStorageChange = () => {
+      loadDashboardData();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    const timer = setTimeout(() => setLoading(false), 2500);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  const saveGoalsToStorage = (updatedGoals) => {
+    setSavingsGoals(updatedGoals);
+    localStorage.setItem(SAVINGS_KEY, JSON.stringify(updatedGoals));
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const handleStartEditGoal = (goal) => {
+    setEditingGoalId(goal.id);
+    setEditGoalTitle(goal.title);
+    setEditGoalSaved(goal.currentAmount);
+    setEditGoalTarget(goal.targetAmount);
+  };
+
+  const handleSaveGoal = (id) => {
+    const updated = savingsGoals.map((g) =>
+      g.id === id
+        ? {
+            ...g,
+            title: editGoalTitle,
+            currentAmount: Number(editGoalSaved) || 0,
+            targetAmount: Number(editGoalTarget) || 0,
+          }
+        : g
+    );
+    saveGoalsToStorage(updated);
+    setEditingGoalId(null);
+  };
+
+  const handleQuickAddSavings = (id, amount) => {
+    const updated = savingsGoals.map((g) =>
+      g.id === id ? { ...g, currentAmount: (g.currentAmount || 0) + amount } : g
+    );
+    saveGoalsToStorage(updated);
+  };
+
+  const handleDismissNotif = (id) => {
+    setNotifications(notifications.filter(n => n.id !== id));
+  };
+
+  const totalSaved = savingsGoals.reduce((acc, curr) => acc + (curr.currentAmount || 0), 0);
+  const totalTarget = savingsGoals.reduce((acc, curr) => acc + (curr.targetAmount || 0), 0);
+  const overallCompletion = totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0;
+
+  const todayDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const firstName = user?.fullName ? user.fullName.trim().split(" ")[0] : "User";
+
+  const handleAskAdvisor = (e) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setIsThinking(true);
+    setTimeout(() => {
+      setQuery("");
+      setIsThinking(false);
+    }, 800);
+  };
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <div className="dashboard">
       <main className="main">
+        {/* Topbar */}
         <header className="topbar">
           <div>
-            <h1>
-              {greeting}, {userName} 👋
-            </h1>
-            <p>
-              Welcome back! Here's a summary of your finances today.
-            </p>
+            <h1>Good day, {firstName} 👋</h1>
+            <p>Today is {todayDate}. Manage your budget and savings below.</p>
           </div>
           <div className="topbar-actions">
-            <button className="icon-btn">
+            <button 
+              className="icon-btn" 
+              onClick={() => setShowNotifModal(true)} 
+              title="Notifications & Reminders"
+              style={{ position: "relative" }}
+            >
               <Bell size={18} />
-              <span className="notif-dot" />
+              {notifications.length > 0 && <span className="notif-dot" />}
             </button>
-            <button className="ask-advisor-btn">
-              <MessageCircle size={16} />
-              Ask Advisor
+            <button className="ask-advisor-btn" onClick={() => setShowAiInput(!showAiInput)}>
+              <Sparkles size={16} />
+              {showAiInput ? "Hide AI" : "Ask AI Advisor"}
             </button>
           </div>
         </header>
 
-        {/* Stat cards */}
-        <section className="stats-row">
-          <div className="stat-card">
-            <div className="stat-icon purple">
-              <Wallet size={18} />
+        {/* AI Drawer */}
+        {showAiInput && (
+          <section className="advisor-chat-banner" style={{ marginBottom: "20px", border: "1px solid #6C4CE0" }}>
+            <div className="advisor-chat-avatar"><Bot size={20} color="#fff" /></div>
+            <div className="advisor-chat-text" style={{ width: "100%" }}>
+              <strong>AI Financial Assistant</strong>
+              <form onSubmit={handleAskAdvisor} style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+                <input
+                  type="text"
+                  placeholder="Ask a question about your plans..."
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  style={{ flex: 1, padding: "8px 12px", borderRadius: "6px", border: "1px solid #edeff3" }}
+                />
+                <button className="chat-with-advisor-btn" type="submit" disabled={isThinking}>
+                  {isThinking ? "Analyzing..." : "Ask AI"}
+                </button>
+              </form>
             </div>
+          </section>
+        )}
+
+        {/* Dynamic Stat Cards */}
+        <section className="stats-row">
+          <div className="stat-card" onClick={() => navigate("/spending-plan")}>
+            <div className="stat-icon purple"><Wallet size={18} /></div>
             <div className="stat-label">Total Budget</div>
-            <div className="stat-value purple-text">₦{totalBudget.toLocaleString()}</div>
+            <div className="stat-value purple-text">₦{(budgetData.totalBudget || 0).toLocaleString()}</div>
             <div className="stat-sub">This Month</div>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon green">
-              <Calendar size={18} />
+
+          <div className="stat-card" onClick={() => navigate("/spending-plan")}>
+            <div className="stat-icon green"><Calendar size={18} /></div>
+            <div className="stat-label green-text">Planned Spending</div>
+            <div className="stat-value green-text">₦{(budgetData.planned || 0).toLocaleString()}</div>
+            <div className="stat-sub">
+              {budgetData.totalBudget > 0 ? `${Math.round((budgetData.planned / budgetData.totalBudget) * 100)}% allocated` : "0% allocated"}
             </div>
-            <div className="stat-label green-text">Spent</div>
-            <div className="stat-value green-text"> ₦{spent.toLocaleString()} </div>
-            <div className="stat-sub"> {budgetUsed}% of budget used </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon orange">
-              <PiggyBank size={18} />
+
+          <div className="stat-card" onClick={() => navigate("/savings-plan")}>
+            <div className="stat-icon orange"><PiggyBank size={18} /></div>
+            <div className="stat-label orange-text">Total Saved</div>
+            <div className="stat-value orange-text">₦{totalSaved.toLocaleString()}</div>
+            <div className="stat-sub">
+              {savingsGoals.length > 0 ? `${overallCompletion}% of total goals` : "No active goals"}
             </div>
-            <div className="stat-label orange-text"> Savings Goal </div>
-            <div className="stat-value orange-text"> ₦{(savings + investments).toLocaleString()} </div>
-            <div className="stat-sub"> Planned Savings </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-icon blue">
-              <Wallet size={18} />
-            </div>
-            <div className="stat-label">Available</div>
-            <div className="stat-value blue-text"> ₦{remainingBalance.toLocaleString()} </div> 
-            <div className="stat-sub"> Available to Spend </div>
+
+          <div className="stat-card" onClick={() => navigate("/insights")}>
+            <div className="stat-icon blue"><Wallet size={18} /></div>
+            <div className="stat-label">Available Funds</div>
+            <div className="stat-value blue-text">₦{(budgetData.available || 0).toLocaleString()}</div>
+            <div className="stat-sub">Unallocated balance</div>
           </div>
         </section>
 
-        {/* Content grid */}
+        {/* Content Grid */}
         <section className="content-grid">
           <div className="left-col">
+            {/* SPENDING OVERVIEW CARD */}
             <div className="card">
               <div className="card-header">
-                <h3>Budget Overview (This Month)</h3>
-                <a href="#" className="link">
-                  View full report <ArrowUpRight size={14} />
-                </a>
+                <h3>Spending Overview</h3>
+                <button className="link" onClick={() => navigate("/spending-plan")} style={{ background: "none", border: "none", cursor: "pointer" }}>
+                  Edit Spending Plan <ArrowUpRight size={14} />
+                </button>
               </div>
               <div className="budget-overview-body">
-                {budgetData.length > 0 ? ( <DonutChart data={budgetData}total={totalBudget} /> ) : ( <div className="empty-state"> <h4>No Budget Yet</h4> <p>Create a spending plan to see your budget overview.</p> 
-              </div>)}
-                <ul className="budget-legend">
-                  {budgetData.map((item) => (
-                    <li key={item.label}>
-                      <span
-                        className="dot"
-                        style={{ background: item.color }}
-                      />
-                      <span className="legend-label">{item.label}</span>
-                      <span className="legend-percent">{item.percent}%</span>
-                      <span className="legend-amount"> ₦{item.amount.toLocaleString()} </span>
-                    </li>
-                  ))}
-                </ul>
+                <DonutChart spent={budgetData.spent} total={budgetData.totalBudget} />
+                <div style={{ flex: 1 }}>
+                  {budgetData.categories && budgetData.categories.length > 0 ? (
+                    <ul style={{ listStyle: "none", padding: 0 }}>
+                      {budgetData.categories.map((cat, i) => (
+                        <li key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "10px 0", fontSize: "13px" }}>
+                          <span>{cat.name}</span>
+                          <span style={{ color: "#6B7280" }}>
+                            ₦{(cat.spent || 0).toLocaleString()} / <strong>₦{(cat.amount || 0).toLocaleString()}</strong>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div style={{ textAlign: "center", color: "#8a8da0", fontSize: "13px" }}>
+                      No budget categories set up yet.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
+            {/* INTERACTIVE SAVINGS GOALS CARD */}
             <div className="card">
               <div className="card-header">
-                <h3>Upcoming Bills & Reminders</h3>
-                <a href="#" className="link">
-                  View all
-                </a>
+                <h3>Savings Plan Actions</h3>
+                <button className="link" onClick={() => navigate("/savings-plan")} style={{ background: "none", border: "none", cursor: "pointer" }}>
+                  {savingsGoals.length > 0 ? "View All Goals" : "Add Goal"} <ArrowUpRight size={14} />
+                </button>
               </div>
-              <ul className="bills-list">
-                {bills.length === 0 ? (
-                  <p>No upcoming bills 🎉</p>
-                ) : (
-                  bills.map((bill) => (
-                    <div className="bill-item" key={bill.id}>
-                      <div className="bill-left">
-                        <div className="bill-icon">📄</div>
 
-                        <div>
-                          <h4>{bill.title}</h4>
-                          <p>{bill.dueDate}</p>
-                        </div>
+              {savingsGoals.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "20px", color: "#8a8da0", fontSize: "13px" }}>
+                  No active savings goals. Create your first goal to interact with it here!
+                </div>
+              ) : (
+                <div style={{ padding: "6px 0" }}>
+                  {savingsGoals.map((goal) => {
+                    const savedVal = goal.currentAmount || 0;
+                    const targetVal = goal.targetAmount || 1;
+                    const percent = targetVal > 0 ? Math.min(100, Math.round((savedVal / targetVal) * 100)) : 0;
+                    const isEditing = editingGoalId === goal.id;
+
+                    return (
+                      <div key={goal.id} className="interactive-goal-card">
+                        {isEditing ? (
+                          <div className="goal-edit-form">
+                            <input
+                              type="text"
+                              value={editGoalTitle}
+                              onChange={(e) => setEditGoalTitle(e.target.value)}
+                              placeholder="Goal Title"
+                            />
+                            <div className="goal-edit-inputs">
+                              <input
+                                type="number"
+                                value={editGoalSaved}
+                                onChange={(e) => setEditGoalSaved(e.target.value)}
+                                placeholder="Saved"
+                              />
+                              <input
+                                type="number"
+                                value={editGoalTarget}
+                                onChange={(e) => setEditGoalTarget(e.target.value)}
+                                placeholder="Target"
+                              />
+                            </div>
+                            <div className="goal-edit-actions">
+                              <button className="btn-small save" onClick={() => handleSaveGoal(goal.id)}>Save</button>
+                              <button className="btn-small cancel" onClick={() => setEditingGoalId(null)}>Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: "600", marginBottom: "6px" }}>
+                              <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                {goal.title}
+                                <button className="icon-action-btn" onClick={() => handleStartEditGoal(goal)}>
+                                  <Edit2 size={12} />
+                                </button>
+                              </span>
+                              <span>₦{savedVal.toLocaleString()} / ₦{targetVal.toLocaleString()}</span>
+                            </div>
+
+                            <div style={{ height: "8px", background: "#E5E7EB", borderRadius: "4px", overflow: "hidden", marginBottom: "8px" }}>
+                              <div style={{ width: `${percent}%`, height: "100%", background: "#6C4CE0", transition: "width 0.4s ease" }} />
+                            </div>
+
+                            <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
+                              <button className="quick-deposit-btn" onClick={() => handleQuickAddSavings(goal.id, 1000)}>
+                                +₦1,000
+                              </button>
+                              <button className="quick-deposit-btn" onClick={() => handleQuickAddSavings(goal.id, 5000)}>
+                                +₦5,000
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
-
-                      <div className="bill-right">
-                        <h4>₦{bill.amount.toLocaleString()}</h4>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </ul>
-            </div>
-
-            <div className="advisor-chat-banner">
-              <div className="advisor-chat-avatar">
-                <Bot size={20} color="#fff" />
-              </div>
-              <div className="advisor-chat-text">
-                <strong>Hi Malvin! I'm here to help you</strong>
-                <p>
-                  I can help you plan your spending, track bills, and reach your
-                  financial goals.
-                </p>
-              </div>
-              <button className="chat-with-advisor-btn">
-                Chat with Advisor
-              </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
           <div className="right-col">
             <div className="card">
               <div className="card-header">
-                <h3>⭐ Advisor Tip</h3>
+                <h3><Sparkles size={16} color="#6C4CE0" style={{ display: "inline", marginRight: "6px" }} /> AI Smart Advisor</h3>
               </div>
               <p className="tip-text">
-                Try the 50/30/20 rule: 50% Needs, 30% Wants, 30% Savings or
-                Investments.
+                Update spent amounts on your Spending Plan page to watch your dashboard progress chart animate automatically.
               </p>
-              <div className="tip-highlight">
-                <div className="tip-icon">💡</div>
-                <div>
-                  <strong>You're doing great!</strong>
-                  <p>You've saved 20% more than last month.</p>
-                </div>
-              </div>
             </div>
 
+            {/* Quick Actions */}
             <div className="card">
               <h3 className="quick-actions-title">Quick Actions</h3>
               <div className="quick-actions-grid">
-
-                <button
-                  className="quick-action"
-                  onClick={() => navigate("/spending-plan")}
-                >
-                  <BarChart3 size={18} />
-                  <span>Spending Plan</span>
+                <button className="quick-action" onClick={() => navigate("/spending-plan")}>
+                  <BarChart3 size={18} /> Spending Plan
                 </button>
-
-                <button
-                  className="quick-action"
-                  onClick={() => setShowBillModal(true)}
-                >
-                  <Calendar size={18} />
-                  <span>Add Reminder</span>
+                <button className="quick-action" onClick={() => navigate("/savings-plan")}>
+                  <PiggyBank size={18} /> Savings Plan
                 </button>
-
-                <button
-                  className="quick-action"
-                  onClick={() => navigate("/savings")}
-                >
-                  <PiggyBank size={18} />
-                  <span>Savings Plan</span>
+                <button className="quick-action" onClick={() => navigate("/bills")}>
+                  <Calendar size={18} /> Add Reminder
                 </button>
-
-                <button
-                  className="quick-action"
-                  onClick={() => navigate("/invest")}
-                  disabled
-                  title="Coming Soon"
-                >
-                  <TrendingUp size={18} />
-                  <span>Invest Plan</span>
-                </button>
-
-                <button
-                  className="quick-action"
-                  onClick={() => setShowTransactionModal(true)}
-                >
-                  <FileText size={18} />
-                  Add Transaction
-                </button>
-
-                <button
-                  className="quick-action"
-                  onClick={() => navigate("/reports")}
-                >
-                  <BarChart3 size={18} />
-                  <span>View Reports</span>
+                <button className="quick-action" onClick={() => navigate("/bills")}>
+                  <FileText size={18} /> Track Bills
                 </button>
 
               </div>
-            </div>
-
-            <div className="card">
-              <div className="card-header">
-                <h3>Recent Transactions</h3>
-                <a href="#" className="link">
-                  View all
-                </a>
-              </div>
-              <ul className="transactions-list">
-                {transactions.length === 0 ? (
-                  <p>No recent transactions.</p>
-                ) : (
-                  transactions.slice(0, 5).map((transaction) => (
-                    <div className="transaction-item" key={transaction.id}>
-                      <div className="transaction-icon">
-                        💳
-                      </div>
-
-                      <div className="transaction-details">
-                        <h4>{transaction.title}</h4>
-                        <span>{transaction.category}</span>
-                      </div>
-
-                      <div className="transaction-right">
-                        <strong>-₦{transaction.amount.toLocaleString()}</strong>
-                        <small>
-                          {new Date(transaction.createdAt?.seconds * 1000).toLocaleDateString()}
-                        </small>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </ul>
             </div>
           </div>
         </section>
       </main>
-      <AddBillModal
-        isOpen={showBillModal}
-        onClose={() => setShowBillModal(false)}
-        onSaved={loadBills}
-      />
 
-      <AddTransactionModal
-        isOpen={showTransactionModal}
-        onClose={() => setShowTransactionModal(false)}
-        onSaved={loadTransactions}
-      />
-      </div>
-    );
+      {/* NOTIFICATIONS MODAL POPUP */}
+      {showNotifModal && (
+        <div className="sp-modal-overlay" style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          backgroundColor: "rgba(0, 0, 0, 0.45)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000
+        }}>
+          <div className="sp-modal" style={{
+            background: "#fff",
+            borderRadius: "12px",
+            padding: "20px",
+            width: "90%",
+            maxWidth: "450px",
+            boxShadow: "0 10px 25px rgba(0,0,0,0.15)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, fontSize: "18px" }}>🔔 Reminders & Notifications</h3>
+              <button 
+                onClick={() => setShowNotifModal(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", padding: "4px" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {notifications.length === 0 ? (
+              <p style={{ color: "#6B7280", fontSize: "14px", textAlign: "center", margin: "20px 0" }}>
+                You have no unread notifications or upcoming bill reminders!
+              </p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "300px", overflowY: "auto" }}>
+                {notifications.map((notif) => (
+                  <div key={notif.id} style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "flex-start",
+                    padding: "12px",
+                    borderRadius: "8px",
+                    background: "#F9FAFB",
+                    borderLeft: "4px solid #6C4CE0"
+                  }}>
+                    <div>
+                      <div style={{ fontSize: "14px", fontWeight: "600", color: "#111827" }}>{notif.title}</div>
+                      <div style={{ fontSize: "12px", color: "#4B5563", marginTop: "2px" }}>{notif.desc}</div>
+                      <div style={{ fontSize: "11px", color: "#9CA3AF", marginTop: "4px" }}>{notif.date}</div>
+                    </div>
+                    <button 
+                      onClick={() => handleDismissNotif(notif.id)}
+                      style={{ background: "none", border: "none", color: "#9CA3AF", cursor: "pointer" }}
+                      title="Dismiss"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end" }}>
+              <button 
+                onClick={() => setShowNotifModal(false)}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#6C4CE0",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  fontWeight: "500"
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
-export default Dashboard;
