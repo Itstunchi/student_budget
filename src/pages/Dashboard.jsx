@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import LoadingScreen from "../components/LoadingScreen/LoadingScreen";
+import { getNotifications } from '../utils/notificationService';
 import {
   Wallet,
   PiggyBank,
@@ -65,9 +66,18 @@ function DonutChart({ spent, total }) {
 const BUDGET_KEY = "user_budget";
 const SAVINGS_KEY = "user_savings_plans";
 
+// ─── Loading screen gate ───
+// Login.jsx / Signup.jsx set this flag right before navigating here, ONLY
+// on a fresh login/signup. Dashboard consumes (clears) it immediately, so
+// simply revisiting /dashboard later in the same session never re-shows
+// the loading screen — only the moment right after authenticating does.
+const JUST_AUTHENTICATED_FLAG = "bb_just_authenticated";
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(
+    () => sessionStorage.getItem(JUST_AUTHENTICATED_FLAG) === "true"
+  );
   const [showAiInput, setShowAiInput] = useState(false);
   const [query, setQuery] = useState("");
   const [isThinking, setIsThinking] = useState(false);
@@ -82,14 +92,10 @@ export default function Dashboard() {
     }
   });
 
-  // NOTIFICATION MODAL STATE
-  const [showNotifModal, setShowNotifModal] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "bill", title: "Electricity Bill Due", desc: "₦15,000 due in 2 days", date: "Jul 31" },
-    { id: 2, type: "alert", title: "Budget Warning", desc: "You have spent 85% of your Dining budget", date: "Today" },
-    { id: 3, type: "report", title: "Monthly Summary Ready", desc: "Your financial report for July is generated", date: "Yesterday" },
-  ]);
 
+// CHANGE TO THIS:
+const [notifications, setNotifications] = useState(() => getNotifications());
+const [showNotifModal, setShowNotifModal] = useState(false);
   const [budgetData, setBudgetData] = useState({
     totalBudget: 0,
     planned: 0,
@@ -189,12 +195,23 @@ export default function Dashboard() {
     const handleStorageChange = () => {
       loadDashboardData();
     };
-
     window.addEventListener("storage", handleStorageChange);
-    const timer = setTimeout(() => setLoading(false), 2500);
 
+    // Only show the loading screen if we just came from a fresh login/signup.
+    // Consuming (removing) the flag here means navigating back to /dashboard
+    // later in the same session — e.g. clicking it in the sidebar — never
+    // triggers the loading screen again.
+    if (sessionStorage.getItem(JUST_AUTHENTICATED_FLAG) === "true") {
+      sessionStorage.removeItem(JUST_AUTHENTICATED_FLAG);
+      const timer = setTimeout(() => setLoading(false), 2500);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("storage", handleStorageChange);
+      };
+    }
+
+    setLoading(false);
     return () => {
-      clearTimeout(timer);
       window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
@@ -284,10 +301,10 @@ export default function Dashboard() {
               <Bell size={18} />
               {notifications.length > 0 && <span className="notif-dot" />}
             </button>
-            <button className="ask-advisor-btn" onClick={() => setShowAiInput(!showAiInput)}>
+            {/* <button className="ask-advisor-btn" onClick={() => setShowAiInput(!showAiInput)}>
               <Sparkles size={16} />
               {showAiInput ? "Hide AI" : "Ask AI Advisor"}
-            </button>
+            </button> */}
           </div>
         </header>
 
@@ -340,7 +357,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="stat-card" onClick={() => navigate("/insights")}>
+          <div className="stat-card" onClick={() => navigate("")}>
             <div className="stat-icon blue"><Wallet size={18} /></div>
             <div className="stat-label">Available Funds</div>
             <div className="stat-value blue-text">₦{(budgetData.available || 0).toLocaleString()}</div>

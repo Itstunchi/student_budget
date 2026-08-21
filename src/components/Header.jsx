@@ -1,20 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { getBillNotifications } from '../components/notifications';
+import { getNotifications, clearAllNotifications } from '../utils/notificationService';
 
 export default function Header() {
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
 
   const refreshNotifications = () => {
-    const alerts = getBillNotifications();
+    const alerts = getNotifications();
     setNotifications(alerts);
   };
 
   useEffect(() => {
     refreshNotifications();
+    
+    // Listen for storage changes and new notifications in real-time
+    window.addEventListener('storage', refreshNotifications);
+    window.addEventListener('new_notification', refreshNotifications);
     window.addEventListener('billsUpdated', refreshNotifications);
-    return () => window.removeEventListener('billsUpdated', refreshNotifications);
+    
+    return () => {
+      window.removeEventListener('storage', refreshNotifications);
+      window.removeEventListener('new_notification', refreshNotifications);
+      window.removeEventListener('billsUpdated', refreshNotifications);
+    };
   }, []);
+
+  const handleClearAll = (e) => {
+    e.stopPropagation();
+    clearAllNotifications();
+    setNotifications([]);
+  };
 
   return (
     <header style={headerStyles.header}>
@@ -39,26 +54,36 @@ export default function Header() {
         {isOpen && (
           <div style={headerStyles.dropdown}>
             <div style={headerStyles.dropdownHeader}>
-              <h4 style={{ margin: 0 }}>Bill Notifications</h4>
-              <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                {notifications.length} alerts
-              </span>
+              <h4 style={{ margin: 0, fontSize: '0.9375rem' }}>Notifications</h4>
+              {notifications.length > 0 && (
+                <button 
+                  onClick={handleClearAll}
+                  style={headerStyles.clearBtn}
+                >
+                  Clear All
+                </button>
+              )}
             </div>
 
             <div style={headerStyles.dropdownList}>
               {notifications.length === 0 ? (
                 <p style={{ padding: '1rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
-                  No pending bill notifications for today or tomorrow. 🎉
+                  No new notifications. 🎉
                 </p>
               ) : (
                 notifications.map((item) => (
                   <div key={item.id} style={headerStyles.notificationItem}>
-                    <div style={{ fontWeight: '600', fontSize: '0.875rem', color: item.type === 'danger' ? '#ef4444' : '#d97706' }}>
+                    <div style={{ fontWeight: '600', fontSize: '0.875rem', color: '#0f172a' }}>
                       {item.title}
                     </div>
                     <div style={{ fontSize: '0.8125rem', color: '#334155', marginTop: '0.25rem' }}>
                       {item.message}
                     </div>
+                    {item.date && (
+                      <div style={{ fontSize: '0.6875rem', color: '#94a3b8', marginTop: '0.25rem' }}>
+                        {item.date} {item.timestamp ? `• ${item.timestamp}` : ''}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -73,7 +98,7 @@ export default function Header() {
 const headerStyles = {
   header: {
     display: 'flex',
-    justifyContent: 'space-between',
+    justify: 'space-between',
     alignItems: 'center',
     padding: '1rem 0',
   },
@@ -105,7 +130,7 @@ const headerStyles = {
     position: 'absolute',
     right: 0,
     top: '45px',
-    width: '300px',
+    width: '320px',
     background: '#ffffff',
     borderRadius: '0.75rem',
     boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
@@ -121,8 +146,17 @@ const headerStyles = {
     alignItems: 'center',
     background: '#f8fafc',
   },
+  clearBtn: {
+    background: 'transparent',
+    border: 'none',
+    color: '#ef4444',
+    fontSize: '0.75rem',
+    fontWeight: '600',
+    cursor: 'pointer',
+    padding: 0,
+  },
   dropdownList: {
-    maxHeight: '260px',
+    maxHeight: '280px',
     overflowY: 'auto',
   },
   notificationItem: {

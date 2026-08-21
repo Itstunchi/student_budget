@@ -267,12 +267,17 @@ label {
     display: flex;
 }
 
+/* Fixed: this rule previously had no default `color`, so on some pages the
+   button text inherited white (or another near-background color) and was
+   only readable once :hover explicitly set the purple color below. Setting
+   an explicit default color here makes the Google button visible at rest. */
 .social-buttons button {
     flex: 1;
     height: 50px;
     border-radius: 15px;
     border: 1px solid #ddd;
     background: white;
+    color: #333333;
     font-size: 15px;
     font-weight: 500;
     cursor: pointer;

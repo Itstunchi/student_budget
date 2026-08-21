@@ -23,6 +23,86 @@ const GEMINI_API_KEY =
   (typeof process !== 'undefined' && process.env?.REACT_APP_GEMINI_API_KEY) ||
   '';
 
+// ─── Generic AI caller: Groq first, Gemini fallback. Both forced into
+//     strict JSON mode so replies always parse instead of chatting in
+//     plain text and silently skipping the requested action. ───
+async function callFinanceAI(systemPrompt, userText) {
+  if (GROQ_API_KEY) {
+    try {
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "llama-3.1-8b-instant",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userText },
+          ],
+          temperature: 0.3,
+          response_format: { type: "json_object" },
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data?.choices?.[0]?.message?.content) {
+        return data.choices[0].message.content;
+      }
+      console.warn("Groq failed, trying Gemini...", data?.error);
+    } catch (err) {
+      console.warn("Groq error, trying Gemini:", err);
+    }
+  }
+
+  if (GEMINI_API_KEY) {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemPrompt}\n\nUser: ${userText}` }] }],
+            generationConfig: { response_mime_type: "application/json" },
+          }),
+        }
+      );
+      const data = await response.json();
+      if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return data.candidates[0].content.parts[0].text;
+      }
+      console.error("Gemini fallback failed:", data?.error);
+    } catch (err) {
+      console.error("Gemini fallback error:", err);
+    }
+  }
+
+  return null;
+}
+
+// ─── Parse the model's JSON reply, tolerating markdown fences / stray text ───
+function parseAiJson(raw) {
+  if (!raw) return null;
+  const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+}
+
+const formatTime = () =>
+  new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
 // ─── Icons (inline SVGs) ───
 const Icons = {
   plus: (
@@ -355,7 +435,8 @@ const CalendarPage = ({ events: propEvents }) => {
   const [aiMessages, setAiMessages] = useState([
     {
       sender: "ai",
-      text: "Hello! I am your AI Advisor. Ask me anything about your upcoming schedule, bill due dates, or payment timing.",
+      text: "Hello! I am your AI Advisor with full control of this page. Ask me about your schedule, or tell me to add, edit, or remove an event — e.g. \"Add a Rent event for 150000 on 2026-09-01\".",
+      time: formatTime(),
     },
   ]);
 
@@ -363,7 +444,7 @@ const CalendarPage = ({ events: propEvents }) => {
 
   useEffect(() => {
     if (isAiOpen) {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   }, [aiMessages, aiLoading, isAiOpen]);
 
@@ -389,6 +470,8 @@ const CalendarPage = ({ events: propEvents }) => {
         status: bill.status,
       }));
       setLocalEvents(mapped);
+    } else {
+      setLocalEvents([]);
     }
   };
 
@@ -431,6 +514,125 @@ const CalendarPage = ({ events: propEvents }) => {
     });
   }, [events, filters]);
 
+  // ─── AI CONTEXT + ACTION EXECUTION ───
+  // The calendar is a read-through view of "user_bills" — creating, editing,
+  // or deleting an "event" here means writing to that same bill store (and
+  // keeping "user_calendar_events" + the billsUpdated event in sync), so
+  // Bills.jsx and the Dashboard immediately reflect the change too.
+
+  const findEventByTitle = (title) => {
+    if (!title) return null;
+    const lower = title.toLowerCase();
+    return (
+      events.find((e) => (e.title || '').toLowerCase().includes(lower)) ||
+      (events.length === 1 ? events[0] : null)
+    );
+  };
+
+  const persistBillsChange = (updatedBillsRaw) => {
+    localStorage.setItem("user_bills", JSON.stringify(updatedBillsRaw));
+    const calendarEvents = updatedBillsRaw.map((bill) => ({
+      id: bill.id,
+      title: `${bill.name} (₦${Number(bill.amount || 0).toLocaleString()})`,
+      date: bill.dueDate,
+      type: "bill",
+      category: bill.category,
+      status: bill.status,
+    }));
+    localStorage.setItem("user_calendar_events", JSON.stringify(calendarEvents));
+    window.dispatchEvent(new Event("billsUpdated"));
+    loadEvents();
+  };
+
+  const buildAiContext = () => ({
+    viewMode,
+    currentMonth: formatMonthYear(currentDate),
+    events: events.map((e) => ({
+      title: e.title,
+      amount: e.amount,
+      date: e.date,
+      category: e.category,
+      status: e.status,
+    })),
+  });
+
+  const buildSystemPrompt = (context) => `You are the AI Calendar Advisor embedded inside a schedule/bills calendar page. You can answer questions AND control the page for the user.
+
+Current page state (JSON): ${JSON.stringify(context)}
+
+Reply with ONLY raw JSON (no markdown fences, no extra commentary) in exactly this shape:
+{"reply": "short personalized conversational answer", "action": null}
+or
+{"reply": "short personalized confirmation of what you did", "action": {"type": "CREATE_EVENT", "title": "Rent", "amount": 150000, "date": "2026-09-01", "category": "Housing"}}
+
+Valid action types: "CREATE_EVENT", "DELETE_EVENT", "EDIT_EVENT", "SWITCH_VIEW", "GO_TO_MONTH".
+- CREATE_EVENT needs "title", "date" (YYYY-MM-DD), optionally "amount" (number) and "category" (Utilities/Entertainment/Housing/Education). If the user clearly asks to add/create an event, ALWAYS include this action.
+- DELETE_EVENT needs "title" matched to the closest event title in the state above.
+- EDIT_EVENT needs "title" and any of "date" or "amount" to change.
+- SWITCH_VIEW needs "view", one of "month"/"week"/"list".
+- GO_TO_MONTH needs "year" (number) and "month" (1-12).
+- Only include an action when the user clearly asks for it, otherwise "action" must be null.
+- Base your reply strictly on the real events listed above; never invent figures.`;
+
+  const executeAction = (action) => {
+    if (!action || !action.type) return;
+    const rawBills = JSON.parse(localStorage.getItem("user_bills") || "[]");
+
+    switch (action.type) {
+      case "CREATE_EVENT": {
+        if (!action.title || !action.date) break;
+        const cat = action.category || "Utilities";
+        const newBill = {
+          id: Date.now().toString(),
+          name: action.title,
+          amount: Number(action.amount) || 0,
+          category: cat,
+          type: "One-time",
+          dueDate: action.date,
+          status: "Unpaid",
+          icon: cat === "Entertainment" ? "🍿" : cat === "Utilities" ? "⚡" : "🏠",
+        };
+        persistBillsChange([newBill, ...rawBills]);
+        break;
+      }
+      case "DELETE_EVENT": {
+        const target = findEventByTitle(action.title);
+        if (target) {
+          persistBillsChange(rawBills.filter((b) => b.id !== target.id));
+        }
+        break;
+      }
+      case "EDIT_EVENT": {
+        const target = findEventByTitle(action.title);
+        if (target) {
+          const updated = rawBills.map((b) =>
+            b.id === target.id
+              ? {
+                  ...b,
+                  dueDate: action.date || b.dueDate,
+                  amount: action.amount !== undefined ? Number(action.amount) : b.amount,
+                }
+              : b
+          );
+          persistBillsChange(updated);
+        }
+        break;
+      }
+      case "SWITCH_VIEW": {
+        if (action.view) setViewMode(action.view);
+        break;
+      }
+      case "GO_TO_MONTH": {
+        if (action.year && action.month) {
+          setCurrentDate(new Date(Number(action.year), Number(action.month) - 1, 1));
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  };
+
   // Floating AI Send Handler (Groq First -> Gemini Fallback)
   const handleSendAiMessage = async (e) => {
     e.preventDefault();
@@ -438,79 +640,28 @@ const CalendarPage = ({ events: propEvents }) => {
 
     const userText = aiPrompt;
     setAiPrompt("");
-    setAiMessages((prev) => [...prev, { sender: "user", text: userText }]);
+    setAiMessages((prev) => [...prev, { sender: "user", text: userText, time: formatTime() }]);
     setAiLoading(true);
 
-    const scheduleList = events
-      .map((ev) => `${ev.title} (₦${ev.amount}) on ${ev.date} [Status: ${ev.status || 'Scheduled'}]`)
-      .join("; ");
+    const context = buildAiContext();
+    const systemPrompt = buildSystemPrompt(context);
+    const rawReply = await callFinanceAI(systemPrompt, userText);
+    const parsed = parseAiJson(rawReply);
 
-    const systemPrompt = `You are BudgetBuddy AI Advisor. Context on current user calendar events: [${scheduleList || "None"}]. Be concise, encouraging, and helpful with their scheduling and bill due dates.`;
-
-    let reply = null;
-
-    if (GROQ_API_KEY) {
-      try {
-        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${GROQ_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: "llama-3.1-8b-instant",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userText },
-            ],
-            temperature: 0.7,
-          }),
-        });
-
-        const data = await response.json();
-        if (response.ok && data?.choices?.[0]?.message?.content) {
-          reply = data.choices[0].message.content;
-        } else {
-          console.warn("Groq failed, switching to Gemini...", data?.error);
-        }
-      } catch (err) {
-        console.warn("Groq error, switching to Gemini:", err);
+    if (parsed && parsed.reply) {
+      if (parsed.action) {
+        executeAction(parsed.action);
       }
-    }
-
-    if (!reply && GEMINI_API_KEY) {
-      try {
-        const fullPrompt = `${systemPrompt}\nUser Question: ${userText}`;
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: fullPrompt }] }],
-            }),
-          }
-        );
-
-        const data = await response.json();
-        if (response.ok && data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-          reply = data.candidates[0].content.parts[0].text;
-        } else {
-          console.error("Gemini fallback failed:", data?.error);
-        }
-      } catch (err) {
-        console.error("Gemini fallback error:", err);
-      }
-    }
-
-    if (reply) {
-      setAiMessages((prev) => [...prev, { sender: "ai", text: reply }]);
+      setAiMessages((prev) => [...prev, { sender: "ai", text: parsed.reply, time: formatTime() }]);
+    } else if (rawReply) {
+      setAiMessages((prev) => [...prev, { sender: "ai", text: rawReply, time: formatTime() }]);
     } else {
       setAiMessages((prev) => [
         ...prev,
         {
           sender: "ai",
           text: "⚠️ Unable to reach AI services right now. Please check your Groq or Gemini keys.",
+          time: formatTime(),
         },
       ]);
     }
@@ -521,18 +672,6 @@ const CalendarPage = ({ events: propEvents }) => {
   return (
     <div className="app-container">
       <style>{`
-        @keyframes aiBounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-8px); }
-        }
-        .animated-ai-btn {
-          animation: aiBounce 2.5s infinite ease-in-out;
-          transition: transform 0.2s ease;
-        }
-        .animated-ai-btn:hover {
-          transform: scale(1.05);
-        }
-        
         .header-top {
           display: flex;
           justify-content: space-between;
@@ -566,6 +705,174 @@ const CalendarPage = ({ events: propEvents }) => {
           color: #64748b;
           font-size: 0.875rem;
           margin: 0;
+        }
+
+        /* ══════════════ AI WIDGET — matches Savings Plan design ══════════════ */
+        .aiw-floating-wrapper {
+          position: fixed !important;
+          bottom: 24px !important;
+          right: 24px !important;
+          z-index: 9999 !important;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 12px;
+        }
+        .aiw-chat-modal {
+          width: 380px;
+          max-width: calc(100vw - 48px);
+          height: 520px;
+          max-height: calc(100vh - 120px);
+          background: white;
+          border-radius: 20px;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          animation: aiw-slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          transform-origin: bottom right;
+        }
+        @keyframes aiw-slide-up {
+          from { opacity: 0; transform: scale(0.9) translateY(20px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .aiw-modal-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px 20px;
+          background: linear-gradient(135deg, #5334ea 0%, #7c3aed 100%);
+          color: white;
+          flex-shrink: 0;
+        }
+        .aiw-title { display: flex; align-items: center; gap: 12px; }
+        .aiw-avatar {
+          width: 38px; height: 38px;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 50%;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 20px;
+          backdrop-filter: blur(10px);
+        }
+        .aiw-title-text { display: flex; flex-direction: column; }
+        .aiw-title-main { font-size: 15px; font-weight: 700; letter-spacing: -0.2px; }
+        .aiw-title-sub {
+          font-size: 11px; opacity: 0.8; font-weight: 500;
+          display: flex; align-items: center; gap: 6px;
+        }
+        .aiw-title-sub::before {
+          content: ''; width: 6px; height: 6px; background: #34d399;
+          border-radius: 50%; display: inline-block;
+          animation: aiw-pulse 2s infinite;
+        }
+        @keyframes aiw-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.6; transform: scale(1.2); }
+        }
+        .aiw-close-btn {
+          width: 32px; height: 32px; border-radius: 50%; border: none;
+          background: rgba(255, 255, 255, 0.15); color: white; font-size: 16px;
+          cursor: pointer; display: flex; align-items: center; justify-content: center;
+          transition: all 0.2s; backdrop-filter: blur(10px);
+        }
+        .aiw-close-btn:hover { background: rgba(255, 255, 255, 0.25); transform: rotate(90deg); }
+        .aiw-chat-body {
+          flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px;
+          background: #f8fafc; display: flex; flex-direction: column; gap: 4px;
+          scroll-behavior: smooth;
+        }
+        .aiw-chat-body::-webkit-scrollbar { width: 6px; }
+        .aiw-chat-body::-webkit-scrollbar-track { background: transparent; }
+        .aiw-chat-body::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 100px; }
+        .aiw-chat-body::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .aiw-date-divider {
+          display: flex; align-items: center; justify-content: center;
+          margin: 8px 0 16px 0; position: relative;
+        }
+        .aiw-date-divider::before {
+          content: ''; position: absolute; left: 20px; right: 20px; height: 1px; background: #e2e8f0;
+        }
+        .aiw-date-divider span {
+          font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase;
+          letter-spacing: 0.5px; background: #f8fafc; padding: 0 12px; position: relative; z-index: 1;
+        }
+        .aiw-bubble-wrapper { display: flex; margin-bottom: 4px; animation: aiw-bubble-in 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+        .aiw-bubble-wrapper.bot { justify-content: flex-start; }
+        .aiw-bubble-wrapper.user { justify-content: flex-end; }
+        @keyframes aiw-bubble-in {
+          from { opacity: 0; transform: translateY(8px) scale(0.95); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .aiw-bubble { display: flex; gap: 8px; max-width: 85%; align-items: flex-end; }
+        .aiw-bubble.bot { flex-direction: row; }
+        .aiw-bubble.user { flex-direction: row-reverse; }
+        .aiw-bubble-avatar {
+          width: 28px; height: 28px;
+          background: linear-gradient(135deg, #5334ea 0%, #7c3aed 100%);
+          border-radius: 50%; display: flex; align-items: center; justify-content: center;
+          font-size: 14px; flex-shrink: 0; margin-bottom: 4px;
+        }
+        .aiw-bubble-content { padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+        .aiw-bubble.bot .aiw-bubble-content {
+          background: white; color: #334155; border-bottom-left-radius: 4px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;
+        }
+        .aiw-bubble.user .aiw-bubble-content {
+          background: linear-gradient(135deg, #5334ea 0%, #7c3aed 100%);
+          color: white; border-bottom-right-radius: 4px;
+        }
+        .aiw-timestamp { display: block; font-size: 10px; margin-top: 6px; opacity: 0.6; font-weight: 500; }
+        .aiw-typing { display: flex; gap: 4px; padding: 4px 8px; align-items: center; }
+        .aiw-typing span {
+          width: 6px; height: 6px; background: #94a3b8; border-radius: 50%;
+          animation: aiw-typing-bounce 1.4s infinite ease-in-out both;
+        }
+        .aiw-typing span:nth-child(1) { animation-delay: -0.32s; }
+        .aiw-typing span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes aiw-typing-bounce {
+          0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+          40% { transform: scale(1); opacity: 1; }
+        }
+        .aiw-input-row { display: flex; gap: 10px; padding: 14px 16px; background: white; border-top: 1px solid #f1f5f9; flex-shrink: 0; }
+        .aiw-input-row input {
+          flex: 1; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 12px;
+          font-size: 14px; font-family: inherit; background: #f8fafc; color: #1e293b;
+          transition: all 0.2s; outline: none;
+        }
+        .aiw-input-row input:focus { border-color: #5334ea; background: white; box-shadow: 0 0 0 3px rgba(83, 52, 234, 0.1); }
+        .aiw-input-row input::placeholder { color: #94a3b8; }
+        .aiw-input-row button {
+          width: 44px; height: 44px; border-radius: 12px; border: none;
+          background: #e2e8f0; color: #94a3b8; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: all 0.2s; flex-shrink: 0;
+        }
+        .aiw-input-row button.active {
+          background: linear-gradient(135deg, #5334ea 0%, #7c3aed 100%); color: white;
+          box-shadow: 0 4px 12px rgba(83, 52, 234, 0.3);
+        }
+        .aiw-input-row button.active:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(83, 52, 234, 0.4); }
+        .aiw-floating-btn {
+          display: flex; align-items: center; gap: 8px; padding: 14px 24px;
+          background: linear-gradient(135deg, #6346f6 0%, #5334ea 100%); color: white; border: none;
+          border-radius: 100px; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+          box-shadow: 0 8px 24px rgba(99, 70, 246, 0.35);
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          animation: aiw-float-jump 2.5s infinite ease-in-out;
+        }
+        .aiw-floating-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(99, 70, 246, 0.45); animation-play-state: paused; }
+        .aiw-floating-btn.open { width: 48px; height: 48px; padding: 0; border-radius: 50%; justify-content: center; animation: none; }
+        @keyframes aiw-float-jump {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        @media (max-width: 480px) {
+          .aiw-floating-wrapper { bottom: 16px; right: 16px; left: 16px; align-items: stretch; }
+          .aiw-chat-modal {
+            width: 100%; max-width: 100%; height: calc(100vh - 100px); max-height: 600px;
+            position: fixed; bottom: 80px; right: 16px; left: 16px;
+          }
+          .aiw-floating-btn { align-self: flex-end; }
         }
       `}</style>
 
@@ -660,154 +967,73 @@ const CalendarPage = ({ events: propEvents }) => {
           </div>
         </div>
 
-        {/* Floating Animated AI Advisor Widget */}
-        <div style={aiStyles.floatingWrapper}>
+        {/* Floating AI Widget — restyled to match Savings Plan design */}
+        <div className="aiw-floating-wrapper">
           {isAiOpen && (
-            <div style={aiStyles.chatDrawer}>
-              <div style={aiStyles.chatHeader}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ fontSize: "1.25rem" }}>🤖</span>
-                  <span style={{ fontWeight: "700", color: "#ffffff" }}>AI Advisor</span>
+            <div className="aiw-chat-modal">
+              <div className="aiw-modal-header">
+                <div className="aiw-title">
+                  <div className="aiw-avatar">🤖</div>
+                  <div className="aiw-title-text">
+                    <span className="aiw-title-main">AI Advisor</span>
+                    <span className="aiw-title-sub">Online</span>
+                  </div>
                 </div>
-                <button onClick={() => setIsAiOpen(false)} style={aiStyles.closeBtn}>✕</button>
+                <button onClick={() => setIsAiOpen(false)} className="aiw-close-btn">✕</button>
               </div>
 
-              <div style={aiStyles.chatBody}>
+              <div className="aiw-chat-body">
+                <div className="aiw-date-divider"><span>Today</span></div>
+
                 {aiMessages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      ...aiStyles.chatBubble,
-                      alignSelf: msg.sender === "user" ? "flex-end" : "flex-start",
-                      background: msg.sender === "user" ? "#7c3aed" : "#f1f5f9",
-                      color: msg.sender === "user" ? "#ffffff" : "#1e293b",
-                    }}
-                  >
-                    {msg.text}
+                  <div key={idx} className={`aiw-bubble-wrapper ${msg.sender === "user" ? "user" : "bot"}`}>
+                    <div className={`aiw-bubble ${msg.sender === "user" ? "user" : "bot"}`}>
+                      {msg.sender !== "user" && <div className="aiw-bubble-avatar">🤖</div>}
+                      <div>
+                        <div className="aiw-bubble-content">{msg.text}</div>
+                        <span className="aiw-timestamp">{msg.time || ''}</span>
+                      </div>
+                    </div>
                   </div>
                 ))}
+
                 {aiLoading && (
-                  <div style={{ ...aiStyles.chatBubble, alignSelf: "flex-start", background: "#f1f5f9", color: "#64748b" }}>
-                    Analyzing schedule... ⏳
+                  <div className="aiw-bubble-wrapper bot">
+                    <div className="aiw-bubble bot">
+                      <div className="aiw-bubble-avatar">🤖</div>
+                      <div className="aiw-bubble-content">
+                        <div className="aiw-typing"><span></span><span></span><span></span></div>
+                      </div>
+                    </div>
                   </div>
                 )}
                 <div ref={chatEndRef} />
               </div>
 
-              <form onSubmit={handleSendAiMessage} style={aiStyles.chatFooter}>
+              <form onSubmit={handleSendAiMessage} className="aiw-input-row">
                 <input
                   type="text"
                   placeholder="Ask AI about your schedule..."
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
-                  style={aiStyles.chatInput}
                 />
-                <button type="submit" style={aiStyles.sendBtn} disabled={aiLoading}>
-                  Send
+                <button type="submit" className={aiPrompt.trim() && !aiLoading ? 'active' : ''} disabled={aiLoading}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
                 </button>
               </form>
             </div>
           )}
 
-          <button className="animated-ai-btn" onClick={() => setIsAiOpen(!isAiOpen)} style={aiStyles.floatingButton}>
-            🤖 AI Advisor
+          <button className={`aiw-floating-btn ${isAiOpen ? "open" : ""}`} onClick={() => setIsAiOpen(!isAiOpen)}>
+            {isAiOpen ? '✕' : <>🤖 AI Advisor</>}
           </button>
         </div>
       </main>
     </div>
   );
-};
-
-// Inline Styles for Floating AI Widget
-const aiStyles = {
-  floatingWrapper: {
-    position: "fixed",
-    bottom: "2rem",
-    right: "2rem",
-    zIndex: 999,
-  },
-  floatingButton: {
-    background: "#7c3aed",
-    color: "#ffffff",
-    border: "none",
-    borderRadius: "2rem",
-    padding: "0.875rem 1.5rem",
-    fontSize: "0.95rem",
-    fontWeight: "700",
-    boxShadow: "0 10px 25px -5px rgba(124, 58, 237, 0.5)",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "0.5rem",
-  },
-  chatDrawer: {
-    position: "absolute",
-    bottom: "70px",
-    right: 0,
-    width: "320px",
-    height: "420px",
-    background: "#ffffff",
-    borderRadius: "1rem",
-    boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.15)",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    border: "1px solid #e2e8f0",
-  },
-  chatHeader: {
-    background: "#7c3aed",
-    padding: "1rem",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  closeBtn: {
-    background: "transparent",
-    border: "none",
-    color: "#ffffff",
-    cursor: "pointer",
-    fontSize: "1rem",
-  },
-  chatBody: {
-    flex: 1,
-    padding: "1rem",
-    overflowY: "auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: "0.75rem",
-  },
-  chatBubble: {
-    padding: "0.625rem 0.875rem",
-    borderRadius: "0.75rem",
-    fontSize: "0.8125rem",
-    maxWidth: "85%",
-    lineHeight: "1.4",
-    wordBreak: "break-word",
-  },
-  chatFooter: {
-    display: "flex",
-    padding: "0.75rem",
-    borderTop: "1px solid #f1f5f9",
-    gap: "0.5rem",
-  },
-  chatInput: {
-    flex: 1,
-    border: "1px solid #cbd5e1",
-    padding: "0.5rem 0.75rem",
-    fontSize: "0.8125rem",
-    outline: "none",
-    borderRadius: "0.5rem",
-  },
-  sendBtn: {
-    background: "#7c3aed",
-    color: "#ffffff",
-    border: "none",
-    padding: "0.5rem 0.875rem",
-    borderRadius: "0.5rem",
-    fontSize: "0.8125rem",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
 };
 
 export default CalendarPage;

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './SpendingPlanWizard.css';
-import { auth } from "../firebase/firebase";
-import { saveBudget } from "../services/budgetService";
-import useBudget from "../hooks/useBudget";
-import Sidebar from "../components/Sidebar";
+import { notify } from "../utils/notificationService";
 
+// Inside your budget submit handler:
+// notify("Spending Plan Updated", `Allocated ₦${amount} across ${categories.length} categories`, "spending");
 // ─── AI API Keys (same pattern used on the Calendar page) ───
 const GROQ_API_KEY =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GROQ_API_KEY) ||
